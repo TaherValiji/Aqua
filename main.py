@@ -15,9 +15,6 @@ class Client(commands.Bot):
         if message.author == self.user:
             return
 
-        if message.content.startswith('hello'):
-            await message.channel.send(f'Hi there {message.author}')
-
         if message.content.lower().startswith('gimme') or message.content.lower().startswith('on in'):
             number : int = int(message.content.split(' ')[-1])
             timestamp = int(time.time())
@@ -25,7 +22,7 @@ class Client(commands.Bot):
             await message.channel.send(f'{message.author} is on <t:{countdown}:R>')
 
     async def on_message_edit(self, before, after):
-        print(f'before: {before.content} after: {after.content}')
+        print(f'bro think he slick changing: {before.content} \n to : {after.content}')
     
 
 
