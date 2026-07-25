@@ -1,8 +1,11 @@
+from dotenv import load_dotenv
+import os
 import discord
 from discord.ext import commands
 from discord import app_commands
 import time
 
+load_dotenv()
 
 class Client(commands.Bot):
     async def on_ready(self):
@@ -36,5 +39,5 @@ async def startServer(interaction: discord.Interaction):
     await interaction.response.send_message("Starting the server...")
     # Add your logic to start the Minecraft server here
 
-
-client.run('MTUzMDYwMzA5MzkyMDg0NTk5Ng.GQ5o69.7U911QVECy3nu18LH3OFskywK2Smm5Yd4jTiCU')
+client_token = os.getenv('CLIENT_TOKEN')
+client.run(client_token)
