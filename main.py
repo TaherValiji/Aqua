@@ -31,7 +31,7 @@ intents.message_content= True
 
 client = Client(command_prefix='/', intents=intents)
 
-@client.tree.command(name="startServer", description="Starts the minecraft server")
+@client.tree.command(name="startserver", description="Starts the minecraft server")
 async def startServer(interaction: discord.Interaction):
     await interaction.response.send_message("Starting the server...")
     # Add your logic to start the Minecraft server here
