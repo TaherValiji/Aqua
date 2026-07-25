@@ -22,7 +22,7 @@ class Client(commands.Bot):
             await message.channel.send(f'{message.author} is on <t:{countdown}:R>')
 
     async def on_message_edit(self, before, after):
-        print(f'bro think he slick changing: {before.content} \n to : {after.content}')
+        print(f'bro think he slick changing: `{before.content}` \n to : `{after.content}`')
     
 
 
