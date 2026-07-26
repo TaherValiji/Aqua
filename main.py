@@ -6,13 +6,13 @@ from discord import app_commands
 import time
 import requests
 
+load_dotenv()
+
 client_token = os.getenv('CLIENT_TOKEN')
 pve_host = os.getenv('PVE_HOST')
 pve_user_token = os.getenv('PVE_USER_TOKEN')
 guild_id1 = discord.Object(os.getenv('SERVER_ID1'))
 guild_id2 = discord.Object(os.getenv('SERVER_ID2'))
-
-load_dotenv()
 
 class Client(commands.Bot):
     async def on_ready(self):
