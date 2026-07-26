@@ -69,4 +69,20 @@ async def startServer(interaction: discord.Interaction):
     else:
         await interaction.followup.send("Server is already running.")
 
+
+@client.tree.command(name="stopserver", description="Stops the minecraft server", guild=guild_id)
+async def stopServer(interaction: discord.Interaction):
+    await interaction.response.send_message("Stopping the server...")
+    if get_status("pve", 101) == "running":
+        r = requests.post(
+            f"{pve_host}/api2/json/nodes/pve/qemu/101/status/shutdown",
+            headers=headers, verify=False
+        )
+        if r.status_code == 200:
+            await interaction.followup.send("Server stopped successfully!")
+        else:
+            await interaction.followup.send("Failed to stop the server.")
+    else:
+        await interaction.followup.send("Server is already stopped.")
+
 client.run(client_token)
