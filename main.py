@@ -18,6 +18,16 @@ class Client(commands.Bot):
     async def on_ready(self):
         print(f'Logged on as {self.user}!')
 
+        try:
+            sync_to_server1 = await self.tree.sync(guild=guild_id1)
+            print(f'Synced {len(sync_to_server1)} commands to guild {guild_id1}.')
+            sync_to_server2 = await self.tree.sync(guild=guild_id2)
+            print(f'Synced {len(sync_to_server2)} commands to guild {guild_id2}.')
+
+        except Exception as e:
+            print(f"Error syncing commands: {e}")
+
+
     async def on_message(self, message):
         if message.author == self.user:
             return
