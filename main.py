@@ -27,6 +27,12 @@ class Client(commands.Bot):
         except Exception as e:
             print(f"Error syncing commands: {e}")
 
+        cmds1 = await self.tree.fetch_commands(guild=guild_id1)
+        print([c.name for c in cmds1])
+
+        cmds2 = await self.tree.fetch_commands(guild=guild_id2)
+        print([c.name for c in cmds2])
+
 
     async def on_message(self, message):
         if message.author == self.user:
@@ -52,16 +58,17 @@ headers = {"Authorization": f"PVEAPIToken={pve_user_token}"}
 
 def shutdown_vm(node, vmid):
     r = requests.post(
-        f"{pve_host}/api2/json/nodes/{node}/qemu/{vmid}/status/shutdown",
+        f"{pve_host}/api2/json/nodes/{node}/lxc/{vmid}/status/shutdown",
         headers=headers, verify=False
     )
     return r.json()
 
 def get_status(node, vmid):
     r = requests.get(
-        f"{pve_host}/api2/json/nodes/{node}/qemu/{vmid}/status/current",
+        f"{pve_host}/api2/json/nodes/{node}/lxc/{vmid}/status/current",
         headers=headers, verify=False
     )
+    print(f"[get_status] status_code={r.status_code}, body={r.text!r}")
     return r.json()["data"]["status"]
 
 
@@ -70,7 +77,7 @@ async def startServer(interaction: discord.Interaction):
     await interaction.response.send_message("Starting the server...")
     if get_status("pve", 101) == "stopped":
         r = requests.post(
-            f"{pve_host}/api2/json/nodes/pve/qemu/101/status/start",
+            f"{pve_host}/api2/json/nodes/pve/lxc/101/status/start",
             headers=headers, verify=False
         )
         if r.status_code == 200:
@@ -86,7 +93,7 @@ async def stopServer(interaction: discord.Interaction):
     await interaction.response.send_message("Stopping the server...")
     if get_status("pve", 101) == "running":
         r = requests.post(
-            f"{pve_host}/api2/json/nodes/pve/qemu/101/status/shutdown",
+            f"{pve_host}/api2/json/nodes/pve/lxc/101/status/shutdown",
             headers=headers, verify=False
         )
         if r.status_code == 200:
