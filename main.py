@@ -4,6 +4,12 @@ import discord
 from discord.ext import commands
 from discord import app_commands
 import time
+import requests
+
+client_token = os.getenv('CLIENT_TOKEN')
+pve_host = os.getenv('PVE_HOST')
+pve_user_token = os.getenv('PVE_USER_TOKEN')
+guild_id = discord.Object(os.getenv('SERVER_ID'))
 
 load_dotenv()
 
@@ -23,7 +29,6 @@ class Client(commands.Bot):
 
     async def on_message_edit(self, before, after):
         await before.channel.send(f'bro think he slick changing: `{before.content}` \n to : `{after.content}`')
-    
 
 
 intents = discord.Intents.default()
@@ -31,10 +36,37 @@ intents.message_content= True
 
 client = Client(command_prefix='/', intents=intents)
 
-@client.tree.command(name="startserver", description="Starts the minecraft server")
+headers = {"Authorization": f"PVEAPIToken={pve_user_token}"}
+
+
+def shutdown_vm(node, vmid):
+    r = requests.post(
+        f"{pve_host}/api2/json/nodes/{node}/qemu/{vmid}/status/shutdown",
+        headers=headers, verify=False
+    )
+    return r.json()
+
+def get_status(node, vmid):
+    r = requests.get(
+        f"{pve_host}/api2/json/nodes/{node}/qemu/{vmid}/status/current",
+        headers=headers, verify=False
+    )
+    return r.json()["data"]["status"]
+
+
+@client.tree.command(name="startserver", description="Starts the minecraft server", guild=guild_id)
 async def startServer(interaction: discord.Interaction):
     await interaction.response.send_message("Starting the server...")
-    # Add your logic to start the Minecraft server here
+    if get_status("pve", 101) == "stopped":
+        r = requests.post(
+            f"{pve_host}/api2/json/nodes/pve/qemu/101/status/start",
+            headers=headers, verify=False
+        )
+        if r.status_code == 200:
+            await interaction.followup.send("Server started successfully!")
+        else:
+            await interaction.followup.send("Failed to start the server.")
+    else:
+        await interaction.followup.send("Server is already running.")
 
-client_token = os.getenv('CLIENT_TOKEN')
 client.run(client_token)
