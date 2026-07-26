@@ -9,7 +9,8 @@ import requests
 client_token = os.getenv('CLIENT_TOKEN')
 pve_host = os.getenv('PVE_HOST')
 pve_user_token = os.getenv('PVE_USER_TOKEN')
-guild_id = discord.Object(os.getenv('SERVER_ID'))
+guild_id1 = discord.Object(os.getenv('SERVER_ID1'))
+guild_id2 = discord.Object(os.getenv('SERVER_ID2'))
 
 load_dotenv()
 
@@ -54,7 +55,7 @@ def get_status(node, vmid):
     return r.json()["data"]["status"]
 
 
-@client.tree.command(name="startserver", description="Starts the minecraft server", guild=guild_id)
+@client.tree.command(name="startserver", description="Starts the minecraft server", guilds=[guild_id1, guild_id2])
 async def startServer(interaction: discord.Interaction):
     await interaction.response.send_message("Starting the server...")
     if get_status("pve", 101) == "stopped":
@@ -70,7 +71,7 @@ async def startServer(interaction: discord.Interaction):
         await interaction.followup.send("Server is already running.")
 
 
-@client.tree.command(name="stopserver", description="Stops the minecraft server", guild=guild_id)
+@client.tree.command(name="stopserver", description="Stops the minecraft server", guilds=[guild_id1, guild_id2])
 async def stopServer(interaction: discord.Interaction):
     await interaction.response.send_message("Stopping the server...")
     if get_status("pve", 101) == "running":
