@@ -44,9 +44,6 @@ class Client(commands.Bot):
             countdown = timestamp + number * 60
             await message.channel.send(f'{message.author} is on <t:{countdown}:R>')
 
-    async def on_message_edit(self, before, after):
-        await before.channel.send(f'bro think he slick changing: `{before.content}` \n to : `{after.content}`')
-
 
 intents = discord.Intents.default()
 intents.message_content= True
