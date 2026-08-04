@@ -38,12 +38,6 @@ class Client(commands.Bot):
         if message.author == self.user:
             return
 
-        if message.content.lower().startswith('gimme') or message.content.lower().startswith('on in'):
-            number : int = int(message.content.split(' ')[-1])
-            timestamp = int(time.time())
-            countdown = timestamp + number * 60
-            await message.channel.send(f'{message.author} is on <t:{countdown}:R>')
-
 
 intents = discord.Intents.default()
 intents.message_content= True
