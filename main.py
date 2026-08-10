@@ -38,7 +38,7 @@ class Client(commands.Bot):
         if message.author == self.user:
             return
         
-        if message.content.startswith("guys boo him"):
+        if message.content[::-1].startswith(("guys boo him")[::-1]):
             await message.channel.send("boo")
 
 
