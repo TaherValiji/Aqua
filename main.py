@@ -37,6 +37,9 @@ class Client(commands.Bot):
     async def on_message(self, message):
         if message.author == self.user:
             return
+        
+        if message.content.startswith("guys boo him"):
+            await message.channel.send("boo")
 
 
 intents = discord.Intents.default()
