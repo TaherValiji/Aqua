@@ -41,6 +41,19 @@ class Client(commands.Bot):
         if message.content[::-1].startswith(("guys boo him")[::-1]):
             await message.channel.send("boo")
 
+        if "chat boo" in message.content.lower() and message.mentions:
+
+            member = message.mentions[0]
+
+            try:
+                await member.send("boo")
+            except discord.Forbidden:
+                await message.channel.send("I don't have permission to send a direct message to that user.")
+            except Exception as e:
+                await message.channel.send(f"An error occurred while trying to send a direct message: {e}")
+
+        await message.channel.send("boo")
+
 
 intents = discord.Intents.default()
 intents.message_content= True
