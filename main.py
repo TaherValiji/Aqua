@@ -1,4 +1,5 @@
 from dotenv import load_dotenv
+import sys
 import os
 import discord
 from discord.ext import commands
@@ -10,9 +11,9 @@ import asyncio
 from typing import Optional, List
 import json
 from urllib.parse import urljoin, quote
+import nacl
 
-
-
+    
 #-------------------------Configuration-------------------------
 
 load_dotenv()
@@ -294,31 +295,36 @@ async def stopServer(interaction: discord.Interaction):
 
 #Bot joins your voice channel
 
-@bot.command(name="join")
-async def join(ctx):
-    if not ctx.author.voice:
-        await ctx.send("You need to be in a voice channel!")
+@bot.tree.command(name="join", description="Joins your voice channel", guilds=[guild_id1, guild_id2])
+async def join(interaction: discord.Interaction):
+
+    await interaction.response.defer()  # Defer the response to give the bot more time to process
+
+    if not interaction.user.voice or not interaction.user.voice.channel:
+        await interaction.followup.send("You need to be in a voice channel!")
         return
     
-    channel = ctx.author.voice.channel
+    channel = interaction.user.voice.channel
+
     try:
         await channel.connect()
-        await ctx.send(f"Joined {channel.name}")
+        await interaction.followup.send(f"Joined {channel.name}")
     except Exception as e:
-        await ctx.send(f"Error joining channel: {e}")
+        await interaction.followup.send(f"Error joining channel: {e}")
 
 
 #Bot leaves voice channel
 
-@bot.command(name="leave")
-async def leave(ctx):
-    if not ctx.voice_client:
-        await ctx.send("Not in a voice channel!")
+@bot.tree.command(name="leave", description="Leaves the voice channel", guilds=[guild_id1, guild_id2])
+async def leave(interaction: discord.Interaction):
+    if not interaction.guild.voice_client or not interaction.guild.voice_client.channel:
+        await interaction.response.defer()
+        await interaction.followup.send("Not in a voice channel!")
         return
     
-    queue = get_queue(ctx.guild.id)
+    queue = get_queue(interaction.guild.id)
     queue.clear()
-    await ctx.voice_client.disconnect()
-    await ctx.send("Left voice channel")
+    await interaction.guild.voice_client.disconnect()
+    await interaction.response.send_message("Left the voice channel")
 
 bot.run(bot_token)
