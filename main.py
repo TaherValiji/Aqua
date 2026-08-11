@@ -52,7 +52,7 @@ class Client(commands.Bot):
             except Exception as e:
                 await message.channel.send(f"An error occurred while trying to send a direct message: {e}")
 
-        await message.channel.send("boo")
+        await bot.process_commands(message)
 
 
 intents = discord.Intents.default()
