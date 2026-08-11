@@ -5,6 +5,7 @@ from discord.ext import commands
 from discord import app_commands
 import time
 import requests
+import aiohttp
 
 
 #-------------------------Configuration-------------------------
@@ -22,13 +23,13 @@ guild_id2 = discord.Object(os.getenv('SERVER_ID2'))
 pve_url = os.getenv('PVE_URL')
 pve_user_token = os.getenv('PVE_USER_TOKEN')
 headers = {"Authorization": f"PVEAPIToken={pve_user_token}"}
-"""
+
 #   Navidrome API Settings
 
 navidrome_url = os.getenv('NAVIDROME_URL')
 navidrome_username = os.getenv('NAVIDROME_USERNAME')
 navidrome_password = os.getenv('NAVIDROME_PASSWORD')
-"""
+
 #-------------------------Bot setup-------------------------
 
 intents = discord.Intents.default()
@@ -37,44 +38,55 @@ intents.voice_states = True
 bot = commands.Bot(command_prefix='/', intents=intents)
 
 
-"""
  #-------------------------Navidrome API Authentication-------------------------
 
-async def navidromeAuthenticate(self) -> bool:
-    try:
-        async with requests.post(
-            f"{navidrome_url}/rest/login",json={
-                'u': navidrome_username, 
-                'p': navidrome_password, 
-                'c': 'Aqua', 
-                'f': 'json'
+class NavidromeClient:
+    def __init__(self, url: str, username: str, password: str):
+        self.url = url
+        self.username = username
+        self.password = password
+        self.auth_token = None
+
+    async def navidromeAuthenticate(self) -> bool:
+        try:
+            async with aiohttp.ClientSession() as session:
+                params = {
+                    'u': self.username, 
+                    'p': self.password, 
+                    'c': 'Aqua', 
+                    'v': '1.16.1',
+                    'f': 'json'
                 }
-        ) as response:
-            if response.status_code == 200:
-                self.token = response.json().get("token")
-                print(f"Successfully authenticated with Navidrome")
-                return True
-            else:
-                print(f"Failed to authenticate with Navidrome: {response.text}")
-                return False
-    except Exception as e:
-        print(f"Error during Navidrome authentication: {e}")
-        return False
-"""
+
+                async with session.get(
+                    f"{self.url}/rest/ping.view",
+                    params=params
+                ) as response:
+                    if response.status == 200:
+                        data = await response.json()
+                        self.auth_token = data.get("subsonic-response", {}).get("authentication", {}).get("token")
+                        print(f"Successfully authenticated with Navidrome")
+                        return True
+                    else:
+                        text = await response.text()
+                        print(f"Failed to authenticate with Navidrome: {text}")
+                        return False
+        except Exception as e:
+            print(f"Error during Navidrome authentication: {e}")
+            return False
+    
+navidrome_client = NavidromeClient(navidrome_url, navidrome_username, navidrome_password)
+
 
 @bot.event
 async def on_ready():
     print(f'Logged on as {bot.user}!')
 
-    """
+    
     #-------------------------Authentication-------------------------
 
-    if await self.navidromeAuthenticate():
-        print("Connected to Navidrome")
-    else:
-        print("Failed to connect to Navidrome")
+    await navidrome_client.navidromeAuthenticate()
 
-    """
     #-------------------------Syncing commands-------------------------
 
     try:
