@@ -1,3 +1,6 @@
+import secrets
+import subprocess
+import hashlib
 from dotenv import load_dotenv
 import sys
 import os
@@ -10,10 +13,10 @@ import aiohttp
 import asyncio
 from typing import Optional, List
 import json
-from urllib.parse import urljoin, quote
+from urllib.parse import urljoin, quote, urlencode
 import nacl
 
-    
+
 #-------------------------Configuration-------------------------
 
 load_dotenv()
@@ -47,14 +50,35 @@ bot = commands.Bot(command_prefix='/', intents=intents)
 #-------------------------Track information class-------------------------
 
 class Track:
-    def __init__(self, data):
+    def __init__(self, data, username, password, server_url):
         self.id = data.get('id')
         self.title = data.get('title', 'Unknown')
         self.artist = data.get('artist', 'Unknown')
         self.album = data.get('album', 'Unknown')
         self.duration = data.get('duration', 0)
         self.path = data.get('path', '')
-        self.stream_url = f"{navidrome_url}/rest/stream.view?u={navidrome_username}&p={navidrome_password}&c=bot&id={self.id}&format=raw"
+        self.username = username
+        self.password = password
+        self.server_url = server_url
+    
+    def get_stream_url(self):
+        """Generate stream URL with token-based authentication"""
+        # Generate salt and token
+        salt = secrets.token_hex(3)
+        token = hashlib.md5((self.password + salt).encode()).hexdigest()
+        
+        # Build params dict (urlencode handles special characters)
+        params = {
+            'u': self.username,
+            't': token,
+            's': salt,
+            'v': '1.8.0',
+            'c': 'Aqua',
+            'id': self.id,
+        }
+        
+        stream_url = f"{self.server_url}/rest/stream?{urlencode(params)}"
+        return stream_url
     
     def __str__(self):
         return f"{self.title} - {self.artist}"
@@ -91,37 +115,109 @@ class NavidromeClient:
         self.url = url
         self.username = username
         self.password = password
-        self.auth_token = None
-
+        self.session = None
+    
+    async def init_session(self):
+        """Initialize persistent session"""
+        if not self.session:
+            self.session = aiohttp.ClientSession()
+    
+    async def close(self):
+        """Close the session"""
+        if self.session:
+            await self.session.close()
+            self.session = None
+    
     async def navidromeAuthenticate(self) -> bool:
+        """Authenticate with Navidrome using token-based auth"""
         try:
-            async with aiohttp.ClientSession() as session:
-                params = {
-                    'u': self.username, 
-                    'p': self.password, 
-                    'c': 'Aqua', 
-                    'v': '1.16.1',
-                    'f': 'json'
-                }
-
-                async with session.get(
-                    f"{self.url}/rest/ping.view",
-                    params=params
-                ) as response:
-                    if response.status == 200:
-                        data = await response.json()
-                        self.auth_token = data.get("subsonic-response", {}).get("authentication", {}).get("token")
-                        print(f"Successfully authenticated with Navidrome")
-                        return True
+            await self.init_session()
+            
+            # Generate salt and token for auth
+            salt = secrets.token_hex(3)
+            token = hashlib.md5((self.password + salt).encode()).hexdigest()
+            
+            params = {
+                'u': self.username,
+                't': token,
+                's': salt,
+                'c': 'Aqua',
+                'v': '1.16.1',
+                'f': 'json'
+            }
+            
+            async with self.session.get(
+                f"{self.url}/rest/ping.view",
+                params=params,
+                timeout=aiohttp.ClientTimeout(total=10)
+            ) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    api_status = data.get("subsonic-response", {}).get("status")
                     
+                    if api_status == "ok":
+                        print("Successfully authenticated with Navidrome")
+                        return True
                     else:
-                        text = await response.text()
-                        print(f"Failed to authenticate with Navidrome: {text}")
+                        error_msg = data.get("subsonic-response", {}).get("error", {}).get("message")
+                        print(f"Failed to authenticate: {error_msg}")
                         return False
+                else:
+                    text = await response.text()
+                    print(f"Failed to authenticate with Navidrome: {text}")
+                    return False
                     
         except Exception as e:
             print(f"Error during Navidrome authentication: {e}")
+            import traceback
+            traceback.print_exc()
             return False
+
+
+    async def search(self, query: str) -> List[Track]:
+        """Search for songs in Navidrome"""
+        try:
+            salt = secrets.token_hex(3)
+            token = hashlib.md5((self.password + salt).encode()).hexdigest()
+            
+            params = {
+                'u': self.username,
+                't': token,
+                's': salt,
+                'c': 'Aqua',
+                'v': '1.16.1',
+                'f': 'json',
+                'query': query,
+                'songCount': 20
+            }
+            
+            timeout = aiohttp.ClientTimeout(total=10)
+            async with self.session.get(
+                f"{self.url}/rest/search3.view",
+                params=params,
+                timeout=timeout
+            ) as resp:
+                resp.raise_for_status()
+                data = await resp.json()
+                
+                api_status = data.get('subsonic-response', {})
+                if api_status.get('status') != 'ok':
+                    error_code = api_status.get('error', {}).get('code')
+                    error_msg = api_status.get('error', {}).get('message', 'Unknown error')
+                    print(f"Subsonic Error {error_code}: {error_msg}")
+                    return []
+                
+                songs = api_status.get('searchResult3', {}).get('song', [])
+                if isinstance(songs, dict):
+                    songs = [songs]
+                
+                # Pass username, password, and URL to Track
+                return [Track(song, self.username, self.password, self.url) for song in songs]
+        except aiohttp.ClientError as e:
+            print(f"Network error searching '{query}': {e}")
+            return []
+        return []
+
     
 navidrome_client = NavidromeClient(navidrome_url, navidrome_username, navidrome_password)
 music_queues = {}  # Store queue for each guild
@@ -143,10 +239,16 @@ async def play_track(voice_client: discord.VoiceClient, track: Track, guild_id: 
     queue.is_playing = True
     
     try:
+        stream_url = track.get_stream_url()
+
         source = discord.FFmpegPCMAudio(
-            track.stream_url,
-            options="-vn -b:a 128k"
+            stream_url,
+            before_options="-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5",
+            options='-vn -filter:a "volume=0.25"'
         )
+        print(f"Playing track: {track.title}")
+        print(f"Stream URL: {stream_url}")
+        print(f"Track ID: {track.id}")
         voice_client.play(source)
     except Exception as e:
         print(f"Error playing track: {e}")
@@ -326,5 +428,35 @@ async def leave(interaction: discord.Interaction):
     queue.clear()
     await interaction.guild.voice_client.disconnect()
     await interaction.response.send_message("Left the voice channel")
+
+
+#   Play Mommy ASMR
+@bot.tree.command(name="playmommyasmr", description="Search and play Mommy ASMR", guilds=[guild_id1, guild_id2])
+async def playMommyASMR(interaction: discord.Interaction):
+
+    await interaction.response.defer()
+    
+    voice_client = interaction.guild.voice_client
+    if not voice_client:
+        await interaction.followup.send("Bot is not in a voice channel! Use `/join` first.")
+        return
+    
+    results = await navidrome_client.search("Mommy Praises Her Sleepy Boy [F4M][good boy][head pats][baby talk]")
+    
+    if not results:
+        await interaction.followup.send(f'could not find the track')
+        return
+
+    print(results)
+    track = results[0]
+    queue = get_queue(interaction.guild_id)
+    queue.add(track)
+    
+    # Start music loop if not already running
+    if not queue.is_playing:
+        queue.is_playing = True
+        await play_track(voice_client, queue.next(), interaction.guild_id)
+        asyncio.create_task(music_loop(interaction.guild_id))
+
 
 bot.run(bot_token)
