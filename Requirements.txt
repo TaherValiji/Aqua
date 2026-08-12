@@ -2,5 +2,5 @@ python-dotenv
 discord.py
 requests
 aiohttp
-discord.py PyNaCl
+PyNaCl
 davey
