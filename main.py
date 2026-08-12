@@ -451,7 +451,8 @@ async def playMommyASMR(interaction: discord.Interaction):
     track = results[0]
     queue = get_queue(interaction.guild_id)
     queue.add(track)
-    
+    await interaction.followup.send(f'playing: {track.title} - {track.artist}')
+
     # Start music loop if not already running
     if not queue.is_playing:
         queue.is_playing = True
