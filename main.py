@@ -460,4 +460,35 @@ async def playMommyASMR(interaction: discord.Interaction):
         asyncio.create_task(music_loop(interaction.guild_id))
 
 
+#   Play Music
+@bot.tree.command(name="play", description="Search and play songs", guilds=[guild_id1, guild_id2])
+async def play(interaction: discord.Interaction, query: str):
+
+    await interaction.response.defer()
+    
+    voice_client = interaction.guild.voice_client
+    if not voice_client:
+        await interaction.followup.send("Bot is not in a voice channel! Use `/join` first.")
+        return
+    
+    results = await navidrome_client.search(query)
+    
+    if not results:
+        await interaction.followup.send(f'could not find the track')
+        return
+
+    print(results)
+    track = results[0]
+    queue = get_queue(interaction.guild_id)
+    queue.add(track)
+    await interaction.followup.send(f'playing: {track.title} - {track.artist}')
+
+    # Start music loop if not already running
+    if not queue.is_playing:
+        queue.is_playing = True
+        await play_track(voice_client, queue.next(), interaction.guild_id)
+        asyncio.create_task(music_loop(interaction.guild_id))
+
+
+
 bot.run(bot_token)
