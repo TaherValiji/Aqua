@@ -15,6 +15,7 @@ from typing import Optional, List
 import json
 from urllib.parse import urljoin, quote, urlencode
 import nacl
+import yt_dlp
 
 
 #-------------------------Configuration-------------------------
@@ -38,6 +39,7 @@ headers = {"Authorization": f"PVEAPIToken={pve_user_token}"}
 navidrome_url = os.getenv('NAVIDROME_URL')
 navidrome_username = os.getenv('NAVIDROME_USERNAME')
 navidrome_password = os.getenv('NAVIDROME_PASSWORD')
+music_library_path = os.getenv('MUSIC_LIBRARY_PATH')
 
 #-------------------------Bot setup-------------------------
 
@@ -490,5 +492,23 @@ async def play(interaction: discord.Interaction, query: str):
         asyncio.create_task(music_loop(interaction.guild_id))
 
 
+#   Download music using yt-dlp (YouTube-DL fork)
+@bot.tree.command(name="add", description="add new songs", guilds=[guild_id1, guild_id2])
+async def add(interaction: discord.Interaction, url: str):
+
+    os.makedirs(music_library_path, exist_ok=True)
+
+    ydl_opts = {
+        'format': 'm4a/bestaudio/best',
+        'outtmpl': os.path.join(music_library_path, '%(title)s.%(ext)s'),
+        # ℹ️ See help(yt_dlp.postprocessor) for a list of available Postprocessors and their arguments
+        'postprocessors': [{  # Extract audio using ffmpeg
+            'key': 'FFmpegExtractAudio',
+            'preferredcodec': 'm4a',
+        }]
+    }
+
+    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+        error_code = ydl.download([url])
 
 bot.run(bot_token)
