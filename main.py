@@ -508,7 +508,17 @@ async def add(interaction: discord.Interaction, url: str):
         }]
     }
 
-    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-        error_code = ydl.download([url])
+    try:
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            error_code = ydl.download([url])
+
+        if error_code == 0:
+            await interaction.response.send_message(f"Successfully added to the music library")
+        else:
+            await interaction.response.send_message(f"Failed to add the song. Error code: {error_code}")
+
+    except Exception as e:
+        await interaction.response.send_message(f"An error occurred while adding the song: {e}")
+    
 
 bot.run(bot_token)
