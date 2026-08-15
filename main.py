@@ -496,6 +496,8 @@ async def play(interaction: discord.Interaction, query: str):
 @bot.tree.command(name="add", description="add new songs", guilds=[guild_id1, guild_id2])
 async def add(interaction: discord.Interaction, url: str):
 
+    await interaction.response.defer(thinking=True)
+
     os.makedirs(music_library_path, exist_ok=True)
 
     ydl_opts = {
@@ -513,12 +515,12 @@ async def add(interaction: discord.Interaction, url: str):
             error_code = ydl.download([url])
 
         if error_code == 0:
-            await interaction.response.send_message(f"Successfully added to the music library")
+            await interaction.followup.send(f"Successfully added to the music library")
         else:
-            await interaction.response.send_message(f"Failed to add the song. Error code: {error_code}")
+            await interaction.followup.send(f"Failed to add the song. Error code: {error_code}")
 
     except Exception as e:
-        await interaction.response.send_message(f"An error occurred while adding the song: {e}")
+        await interaction.followup.send(f"An error occurred while adding the song: {e}")
     
 
 bot.run(bot_token)
