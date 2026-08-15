@@ -493,8 +493,8 @@ async def play(interaction: discord.Interaction, query: str):
 
 
 #   Download music using yt-dlp (YouTube-DL fork)
-@bot.tree.command(name="add", description="add new songs", guilds=[guild_id1, guild_id2])
-async def add(interaction: discord.Interaction, url: str):
+@bot.tree.command(name="get", description="get new songs", guilds=[guild_id1, guild_id2])
+async def get(interaction: discord.Interaction, url: str):
 
     await interaction.response.defer(thinking=True)
 
