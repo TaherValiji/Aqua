@@ -175,9 +175,9 @@ class NavidromeClient:
             traceback.print_exc()
             return False
 
-
+    # search for songs by name
     async def search(self, query: str) -> List[Track]:
-        """Search for songs in Navidrome"""
+        print(f"Searching for track by name: {query}")
         try:
             salt = secrets.token_hex(3)
             token = hashlib.md5((self.password + salt).encode()).hexdigest()
@@ -553,7 +553,7 @@ async def track_autocomplete(
     choices = [
         app_commands.Choice(
             name=f"{track.title} - {track.artist}",
-            value=track.id
+            value=track.title
         )
         for track in results[:25]
     ]
@@ -572,14 +572,7 @@ async def play(interaction: discord.Interaction, query: str):
         await interaction.followup.send("Bot is not in a voice channel! Use `/join` first.")
         return
 
-    is_track_id = query and not ' ' in query and len(query) > 10 and query.isalnum()
-    
-    if is_track_id:
-        # Use search_by_id for autocomplete selections
-        results = await navidrome_client.search_by_id(query)
-    else:
-        # Regular text search
-        results = await navidrome_client.search(query)
+    results = await navidrome_client.search(query)
     
     if not results:
         await interaction.followup.send(f'could not find the track')
