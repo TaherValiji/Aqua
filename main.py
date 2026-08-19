@@ -569,6 +569,23 @@ async def play(interaction: discord.Interaction, query: str):
         asyncio.create_task(music_loop(interaction.guild_id))
 
 
+#Stop playback and clear queue
+@bot.tree.command(name="stop", description="Stop playback", guilds=[guild_id1, guild_id2])
+async def stop(interaction: discord.Interaction):
+    """Stop playback"""
+    await interaction.response.defer()
+    
+    voice_client = interaction.guild.voice_client
+    if not voice_client:
+        await interaction.followup.send("Bot is not in a voice channel!")
+        return
+    
+    voice_client.stop()
+    queue = get_queue(interaction.guild_id)
+    queue.clear()
+    await interaction.followup.send("Playback stopped")
+
+
 #   Download music using yt-dlp (YouTube-DL fork)
 @bot.tree.command(name="get", description="get new songs", guilds=[guild_id1, guild_id2])
 async def get(interaction: discord.Interaction, url: str):
@@ -603,7 +620,6 @@ async def get(interaction: discord.Interaction, url: str):
 # Display music player UI
 @bot.tree.command(name="player", description="Display the music player", guilds=[guild_id1, guild_id2])
 async def player(interaction: discord.Interaction):
-    """Display the music player with control buttons"""
     embed = create_player_embed()
     view = MusicPlayerView()
     
