@@ -357,6 +357,83 @@ def get_status(node, vmid):
     return r.json()["data"]["status"]
 
 
+#-------------------------Discord UI Components-------------------------
+
+class MusicPlayerView(discord.ui.View):
+    """View class for music player buttons"""
+    def __init__(self, timeout=None):
+        super().__init__(timeout=timeout)
+        self.is_playing = False
+        self.queue = []
+ 
+    @discord.ui.button(label="Play", style=discord.ButtonStyle.success)
+    async def play_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        """Play button callback"""
+        self.is_playing = True
+        await interaction.response.send_message("Now playing: Example Song", ephemeral=True)
+ 
+    @discord.ui.button(label="Pause", style=discord.ButtonStyle.danger)
+    async def pause_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        """Pause button callback"""
+        self.is_playing = False
+        await interaction.response.send_message("Playback paused", ephemeral=True)
+ 
+    @discord.ui.button(label="Add to Queue", style=discord.ButtonStyle.primary)
+    async def queue_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        """Add to queue button callback"""
+        # In a real implementation, you'd prompt for a song name
+        await interaction.response.send_message("Added to queue! (Placeholder response)", ephemeral=True)
+ 
+    @discord.ui.button(label="Skip", style=discord.ButtonStyle.secondary)
+    async def skip_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        """Skip button callback"""
+        await interaction.response.send_message("Skipped to next song", ephemeral=True)
+ 
+    @discord.ui.button(label="Stop", style=discord.ButtonStyle.danger)
+    async def stop_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        """Stop button callback"""
+        self.is_playing = False
+        self.queue = []
+        await interaction.response.send_message("Playback stopped and queue cleared", ephemeral=True)
+ 
+ 
+def create_player_embed():
+    """Create the music player embed"""
+    embed = discord.Embed(
+        title="🎵 Music Player",
+        description="Control your music with the buttons below",
+        color=discord.Color.purple()
+    )
+    
+    embed.add_field(
+        name="Now Playing",
+        value="🎵 No song selected",
+        inline=False
+    )
+    
+    embed.add_field(
+        name="Queue",
+        value="Queue is empty",
+        inline=False
+    )
+    
+    embed.add_field(
+        name="Volume",
+        value="100%",
+        inline=True
+    )
+    
+    embed.add_field(
+        name="Status",
+        value="Stopped",
+        inline=True
+    )
+    
+    embed.set_footer(text="Use the buttons below to control playback")
+    
+    return embed
+
+
 #-------------------------Discord Commands-------------------------
 
 #------------------------Server Control Commands-------------------------
@@ -521,6 +598,20 @@ async def get(interaction: discord.Interaction, url: str):
 
     except Exception as e:
         await interaction.followup.send(f"An error occurred while adding the song: {e}")
+
+
+# Display music player UI
+@bot.tree.command(name="player", description="Display the music player", guilds=[guild_id1, guild_id2])
+async def player(interaction: discord.Interaction):
+    """Display the music player with control buttons"""
+    embed = create_player_embed()
+    view = MusicPlayerView()
+    
+    await interaction.response.send_message(
+        embed=embed,
+        view=view
+    )
+
     
 
 bot.run(bot_token)
