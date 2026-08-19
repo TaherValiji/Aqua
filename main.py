@@ -539,8 +539,30 @@ async def playMommyASMR(interaction: discord.Interaction):
         asyncio.create_task(music_loop(interaction.guild_id))
 
 
+#Autocomplete for the play command
+async def track_autocomplete(
+    interaction: discord.Interaction,
+    current: str,
+) -> List[app_commands.Choice[str]]:
+    if len(current) < 2:
+        return []
+    
+    results = await navidrome_client.search(current)
+    
+    # Return up to 25 choices (Discord limit)
+    choices = [
+        app_commands.Choice(
+            name=f"{track.title} - {track.artist}",
+            value=track.id
+        )
+        for track in results[:25]
+    ]
+    return choices
+
+
 #   Play Music
 @bot.tree.command(name="play", description="Search and play songs", guilds=[guild_id1, guild_id2])
+@app_commands.autocomplete(query=track_autocomplete)
 async def play(interaction: discord.Interaction, query: str):
 
     await interaction.response.defer()
@@ -549,8 +571,15 @@ async def play(interaction: discord.Interaction, query: str):
     if not voice_client:
         await interaction.followup.send("Bot is not in a voice channel! Use `/join` first.")
         return
+
+    is_track_id = query and not ' ' in query and len(query) > 10 and query.isalnum()
     
-    results = await navidrome_client.search(query)
+    if is_track_id:
+        # Use search_by_id for autocomplete selections
+        results = await navidrome_client.search_by_id(query)
+    else:
+        # Regular text search
+        results = await navidrome_client.search(query)
     
     if not results:
         await interaction.followup.send(f'could not find the track')
@@ -572,7 +601,6 @@ async def play(interaction: discord.Interaction, query: str):
 #Stop playback and clear queue
 @bot.tree.command(name="stop", description="Stop playback", guilds=[guild_id1, guild_id2])
 async def stop(interaction: discord.Interaction):
-    """Stop playback"""
     await interaction.response.defer()
     
     voice_client = interaction.guild.voice_client
@@ -581,9 +609,43 @@ async def stop(interaction: discord.Interaction):
         return
     
     voice_client.stop()
+    await interaction.followup.send("Playback stopped")
+
+
+#Clear queue
+@bot.tree.command(name="clear", description="Clear the queue", guilds=[guild_id1, guild_id2])
+async def clear_queue(interaction: discord.Interaction):
+    await interaction.response.defer()
+    
     queue = get_queue(interaction.guild_id)
     queue.clear()
-    await interaction.followup.send("Playback stopped")
+    await interaction.followup.send("Queue cleared")
+
+
+#display the queue
+@bot.tree.command(name="queue", description="Show current queue", guilds=[guild_id1, guild_id2])
+async def show_queue(interaction: discord.Interaction):
+    await interaction.response.defer()
+    
+    queue = get_queue(interaction.guild_id)
+    
+    if not queue.current and not queue.queue:
+        await interaction.followup.send("Queue is empty!")
+        return
+    
+    embed = discord.Embed(title="Music Queue", color=discord.Color.blue())
+    
+    if queue.current:
+        embed.add_field(name="Now Playing", value=str(queue.current), inline=False)
+    
+    if queue.queue:
+        queue_str = "\n".join([f"{i+1}. {track}" for i, track in enumerate(queue.queue[:10])])
+        embed.add_field(name="Up Next", value=queue_str, inline=False)
+        
+        if len(queue) > 10:
+            embed.add_field(name="More", value=f"... and {len(queue) - 10} more", inline=False)
+    
+    await interaction.followup.send(embed=embed)
 
 
 #   Download music using yt-dlp (YouTube-DL fork)
