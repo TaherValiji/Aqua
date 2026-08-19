@@ -394,13 +394,11 @@ class MusicPlayerView(discord.ui.View):
  
     @discord.ui.button(label="Play", style=discord.ButtonStyle.success)
     async def play_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        """Play button callback"""
         self.is_playing = True
         await interaction.response.send_message("Now playing: Example Song", ephemeral=True)
  
     @discord.ui.button(label="Pause", style=discord.ButtonStyle.danger)
     async def pause_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        """Pause button callback"""
         self.is_playing = False
         await interaction.response.send_message("Playback paused", ephemeral=True)
  
@@ -409,18 +407,40 @@ class MusicPlayerView(discord.ui.View):
         """Add to queue button callback"""
         # In a real implementation, you'd prompt for a song name
         await interaction.response.send_message("Added to queue! (Placeholder response)", ephemeral=True)
- 
+
+    # Skip button to skip to the next song
     @discord.ui.button(label="Skip", style=discord.ButtonStyle.secondary)
     async def skip_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        """Skip button callback"""
+        queue = get_queue(interaction.guild_id)
+        if queue.loop_mode == 2:  # If in song loop mode, disable skipping
+            next_track = queue.current
+        else:
+            next_track = queue.next()
+            return
         await interaction.response.send_message("Skipped to next song", ephemeral=True)
- 
+
+    # Stop button to stop playback
     @discord.ui.button(label="Stop", style=discord.ButtonStyle.danger)
     async def stop_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        """Stop button callback"""
         self.is_playing = False
-        self.queue = []
         await interaction.response.send_message("Playback stopped and queue cleared", ephemeral=True)
+
+    # Loop button callback
+    @discord.ui.button(label="Loop", style=discord.ButtonStyle.primary)
+    async def loop_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        queue = get_queue(interaction.guild_id)
+        next_mode = (queue.loop_mode + 1) % 3
+        queue.set_loop_mode(next_mode)
+        
+        mode_names = {
+            0: "No Loop",
+            1: "Queue Loop",
+            2: "Song Loop"
+        }
+        
+        mode_name = mode_names[next_mode]
+        
+        await interaction.response.send_message(f"Loop mode changed to: {mode_name}", ephemeral=True)
  
  
 def create_player_embed():
@@ -679,9 +699,9 @@ async def loop_cmd(interaction: discord.Interaction):
     queue.set_loop_mode(next_mode)
     
     mode_names = {
-        0: ("No Loop"),
-        1: ("Queue Loop"),
-        2: ("Song Loop")
+        0: "No Loop",
+        1: "Queue Loop",
+        2: "Song Loop"
     }
     
     mode_name = mode_names[next_mode]
