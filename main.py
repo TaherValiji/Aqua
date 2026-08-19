@@ -1,4 +1,5 @@
 import secrets
+from statistics import mode
 import subprocess
 import hashlib
 from dotenv import load_dotenv
@@ -92,6 +93,8 @@ class MusicQueue:
         self.queue: List[Track] = []
         self.current: Optional[Track] = None
         self.is_playing = False
+        self.loop_mode = 0  # 0 = no loop, 1 = queue loop, 2 = song loop
+        self.original_queue: List[Track] = []
     
     def add(self, track: Track):
         self.queue.append(track)
@@ -100,11 +103,20 @@ class MusicQueue:
         if self.queue:
             return self.queue.pop(0)
         return None
-    
+
+    def set_loop_mode(self, mode: int):
+        if mode == 1 and self.queue:
+            self.original_queue = self.queue.copy()
+        self.loop_mode = mode
+
+
     def clear(self):
         self.queue.clear()
+        self.original_queue.clear()
         self.current = None
         self.is_playing = False
+        self.loop_mode = 0
+
     
     def __len__(self):
         return len(self.queue)
@@ -276,13 +288,27 @@ async def music_loop(guild_id: int):
         if not voice_client.is_connected():
             queue.clear()
             break
-        
+
         if not voice_client.is_playing() and queue.is_playing:
-            next_track = queue.next()
+            next_track = None
+            
+            if queue.loop_mode == 2: #song loop
+                next_track = queue.current
+
+            elif queue.loop_mode == 1: #queue loop
+                next_track = queue.next()
+
+                if not next_track and queue.original_queue:
+                    queue.queue = queue.original_queue.copy()
+                    next_track = queue.next()
+            else: #no loop
+                next_track = queue.next()
+            
             if next_track:
                 await play_track(voice_client, next_track, guild_id)
             else:
                 queue.is_playing = False
+
 
 
 @bot.event
@@ -637,6 +663,31 @@ async def show_queue(interaction: discord.Interaction):
         
         if len(queue) > 10:
             embed.add_field(name="More", value=f"... and {len(queue) - 10} more", inline=False)
+    
+    await interaction.followup.send(embed=embed)
+
+
+# Cycle loop mode
+@bot.tree.command(name="loop", description="Cycle loop mode: no loop → queue loop → song loop", guilds=[guild_id1, guild_id2])
+async def loop_cmd(interaction: discord.Interaction):
+
+    await interaction.response.defer()
+    
+    queue = get_queue(interaction.guild_id)
+    
+    next_mode = (queue.loop_mode + 1) % 3
+    queue.set_loop_mode(next_mode)
+    
+    mode_names = {
+        0: ("No Loop"),
+        1: ("Queue Loop"),
+        2: ("Song Loop")
+    }
+    
+    mode_name = mode_names[next_mode]
+    
+    embed = discord.Embed(title="Loop Mode Changed", color=discord.Color.blue())
+    embed.add_field(name="Mode", value=mode_name, inline=False)
     
     await interaction.followup.send(embed=embed)
 
