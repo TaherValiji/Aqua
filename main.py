@@ -360,9 +360,6 @@ async def on_message(message):
         except Exception as e:
             await message.channel.send(f"An error occurred while trying to send a direct message: {e}")
 
-    if "secret" in message.content.lower():
-        await message.channel.send("I know your secret", ephemeral=True)
-
     await bot.process_commands(message)
 
 
@@ -730,7 +727,5 @@ async def player(interaction: discord.Interaction):
         embed=embed,
         view=view
     )
-
-    
 
 bot.run(bot_token)
