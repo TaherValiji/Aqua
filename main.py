@@ -386,20 +386,19 @@ def get_status(node, vmid):
 #-------------------------Discord UI Components-------------------------
 
 class MusicPlayerView(discord.ui.View):
-    """View class for music player buttons"""
     def __init__(self, timeout=None):
         super().__init__(timeout=timeout)
-        self.is_playing = False
-        self.queue = []
  
     @discord.ui.button(label="Play", style=discord.ButtonStyle.success)
     async def play_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        self.is_playing = True
-        await interaction.response.send_message("Now playing: Example Song", ephemeral=True)
+        queue = get_queue(interaction.guild_id)
+        queue.is_playing = True
+        await interaction.response.send_message("Now playing: " + queue.current.title if queue.current else "No song selected", ephemeral=True)
  
     @discord.ui.button(label="Pause", style=discord.ButtonStyle.danger)
     async def pause_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        self.is_playing = False
+        queue = get_queue(interaction.guild_id)
+        queue.is_playing = False
         await interaction.response.send_message("Playback paused", ephemeral=True)
  
     @discord.ui.button(label="Add to Queue", style=discord.ButtonStyle.primary)
@@ -422,7 +421,9 @@ class MusicPlayerView(discord.ui.View):
     # Stop button to stop playback
     @discord.ui.button(label="Stop", style=discord.ButtonStyle.danger)
     async def stop_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        self.is_playing = False
+        queue = get_queue(interaction.guild_id)
+        queue.is_playing = False
+        queue.clear()
         await interaction.response.send_message("Playback stopped and queue cleared", ephemeral=True)
 
     # Loop button callback
@@ -450,33 +451,6 @@ def create_player_embed():
         description="Control your music with the buttons below",
         color=discord.Color.purple()
     )
-    
-    embed.add_field(
-        name="Now Playing",
-        value="🎵 No song selected",
-        inline=False
-    )
-    
-    embed.add_field(
-        name="Queue",
-        value="Queue is empty",
-        inline=False
-    )
-    
-    embed.add_field(
-        name="Volume",
-        value="100%",
-        inline=True
-    )
-    
-    embed.add_field(
-        name="Status",
-        value="Stopped",
-        inline=True
-    )
-    
-    embed.set_footer(text="Use the buttons below to control playback")
-    
     return embed
 
 
