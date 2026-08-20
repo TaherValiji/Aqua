@@ -21,7 +21,10 @@ class NavidromeClient:
         if self.session:
             await self.session.close()
             self.session = None
-    
+
+        
+ #-------------------------Navidrome API Authentication-------------------------
+ 
     async def navidromeAuthenticate(self) -> bool:
         """Authenticate with Navidrome using token-based auth"""
         try:
