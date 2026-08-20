@@ -4,3 +4,4 @@ requests
 aiohttp
 PyNaCl
 davey
+"yt-dlp[default,curl-cffi]"

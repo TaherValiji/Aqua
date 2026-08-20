@@ -475,13 +475,16 @@ async def get(interaction: discord.Interaction, url: str):
     os.makedirs(music_library_path, exist_ok=True)
 
     ydl_opts = {
-        'format': 'm4a/bestaudio/best',
-        'outtmpl': os.path.join(music_library_path, '%(title)s.%(ext)s'),
-        # ℹ️ See help(yt_dlp.postprocessor) for a list of available Postprocessors and their arguments
-        'postprocessors': [{  # Extract audio using ffmpeg
-            'key': 'FFmpegExtractAudio',
-            'preferredcodec': 'm4a',
-        }]
+    'format': 'm4a/bestaudio/best',
+    'js_runtimes': {'node': {}},
+    'outtmpl': os.path.join(music_library_path, '%(title)s.%(ext)s'),
+    'http_headers': {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+    },
+    'postprocessors': [{
+        'key': 'FFmpegExtractAudio',
+        'preferredcodec': 'm4a',
+    }],
     }
 
     try:
@@ -495,6 +498,9 @@ async def get(interaction: discord.Interaction, url: str):
             await interaction.followup.send(f"Failed to add the song. Error code: {error_code}")
 
     except Exception as e:
+        print(f"Full error: {type(e).__name__}: {e}")  # Print full details
+        import traceback
+        traceback.print_exc() 
         await interaction.followup.send(f"An error occurred while adding the song: {e}")
 
 
