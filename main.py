@@ -118,10 +118,13 @@ def get_status(node, vmid):
     print(f"[get_status] status_code={r.status_code}, body={r.text!r}")
     return r.json()["data"]["status"]
 
-class PlaySongModal(discord.ui.Modal, title="Search and Play Song"):
+
+#-------------------------Discord Modal UI-------------------------
+
+class PlayNowSongModal(discord.ui.Modal, title="Search and play songs"):
 
     query_input = discord.ui.TextInput(
-        label="Song Title or Query",
+        label="Song title or query",
         placeholder="Enter song name, artist, or URL...",
         required=True,
         max_length=100,
@@ -141,7 +144,7 @@ class PlaySongModal(discord.ui.Modal, title="Search and Play Song"):
         results = await navidrome_client.search(query)
         
         if not results:
-            await interaction.followup.send(f'could not find the track')
+            await interaction.followup.send(f'Could not find the track')
             return
 
         print(results)
@@ -158,39 +161,85 @@ class PlaySongModal(discord.ui.Modal, title="Search and Play Song"):
             await play_track(voice_client, queue.next(), interaction.guild_id)
             asyncio.create_task(music_loop(interaction.guild_id))
 
+class PlaySongModal(discord.ui.Modal, title="Add a song to the queue"):
 
+    query_input = discord.ui.TextInput(
+        label="Song Title or Query",
+        placeholder="Enter song name, artist, or URL...",
+        required=True,
+        max_length=100,
+        min_length=1
+    )
+
+    async def on_submit(self, interaction: discord.Interaction):
+        await interaction.response.defer()
+
+        query = self.query_input.value.strip()
+            
+        voice_client = interaction.guild.voice_client
+        if not voice_client:
+            await interaction.followup.send("Bot is not in a voice channel! Use `/join` first.")
+            return
+    
+        results = await navidrome_client.search(query)
+        
+        if not results:
+            await interaction.followup.send(f'Could not find the track')
+            return
+    
+        print(results)
+        track = results[0]
+        queue = get_queue(interaction.guild_id)
+        queue.add(track)
+        await interaction.followup.send(f'Playing: {track.title} - {track.artist}')
+    
+        # Start music loop if not already running
+        if not queue.is_playing:
+            queue.is_playing = True
+            await play_track(voice_client, queue.next(), interaction.guild_id)
+            asyncio.create_task(music_loop(interaction.guild_id))
 #-------------------------Discord UI Components-------------------------
 
 class MusicPlayerView(discord.ui.View):
     def __init__(self, timeout=None):
         super().__init__(timeout=timeout)
- 
-    @discord.ui.button(label="Play", style=discord.ButtonStyle.success)
-    async def play_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+
+    # Play song
+    @discord.ui.button(label="Play now", style=discord.ButtonStyle.success)
+    async def playNow_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.send_modal(PlayNowSongModal())
+
+    # Add song to queue
+    @discord.ui.button(label="Queue song", style=discord.ButtonStyle.success)
+    async def queueAdd_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.send_modal(PlaySongModal())
- 
-    @discord.ui.button(label="Pause", style=discord.ButtonStyle.danger)
-    async def pause_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        queue = get_queue(interaction.guild_id)
-        queue.is_playing = False
-        await interaction.response.send_message("Playback paused", ephemeral=True)
- 
-    @discord.ui.button(label="Add to Queue", style=discord.ButtonStyle.primary)
-    async def queue_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        """Add to queue button callback"""
-        # In a real implementation, you'd prompt for a song name
-        await interaction.response.send_message("Added to queue! (Placeholder response)", ephemeral=True)
 
     # Skip button to skip to the next song
     @discord.ui.button(label="Skip", style=discord.ButtonStyle.secondary)
     async def skip_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.defer()
+        
+        voice_client = interaction.guild.voice_client
+        if not voice_client:
+                await interaction.followup.send("Bot is not in a voice channel! Use `/join` first.")
+                return
+        
         queue = get_queue(interaction.guild_id)
-        if queue.loop_mode == 2:  # If in song loop mode, disable skipping
-            next_track = queue.current
-        else:
-            next_track = queue.next()
+        
+        if not queue.is_playing:
+            await interaction.followup.send("Bot is not playing songs from queue.")
             return
-        await interaction.response.send_message("Skipped to next song", ephemeral=True)
+            
+        else:
+            if queue.loop_mode == 2:
+                track = queue.current()
+                await interaction.followup.send(f'Playing: {track.title} - {track.artist}')
+                await play_track(voice_client, queue.current(), interaction.guild_id)
+            else:
+                track = queue.next()
+                voice_client.stop()
+                await interaction.followup.send(f'Playing: {track.title} - {track.artist}')
+                await play_track(voice_client, queue.next(), interaction.guild_id)
 
     # Stop button to stop playback
     @discord.ui.button(label="Stop", style=discord.ButtonStyle.danger)
@@ -199,13 +248,18 @@ class MusicPlayerView(discord.ui.View):
         if not voice_client:
             await interaction.followup.send("Bot is not in a voice channel!")
             return
-
-        queue = get_queue(interaction.guild_id)
-        queue.is_playing = False
-        queue.clear()
-        await interaction.response.send_message("Playback stopped and queue cleared", ephemeral=True)
+        
+        await interaction.response.send_message("Playback stopped", ephemeral=True)
         
         voice_client.stop()
+
+    # Button to clear queue
+    @discord.ui.button(label="Clear queue", style=discord.ButtonStyle.danger)
+    async def clearQueue_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.defer()    
+        queue = get_queue(interaction.guild_id)
+        queue.clear()
+        await interaction.followup.send("Queue cleared")
 
     # Loop button callback
     @discord.ui.button(label="Loop", style=discord.ButtonStyle.primary)
@@ -223,8 +277,33 @@ class MusicPlayerView(discord.ui.View):
         mode_name = mode_names[next_mode]
         
         await interaction.response.send_message(f"Loop mode changed to: {mode_name}", ephemeral=True)
- 
- 
+
+    # Button to view the queue
+    @discord.ui.button(label="View queue", style=discord.ButtonStyle.secondary)
+    async def viewQueue_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.defer()
+            
+        queue = get_queue(interaction.guild_id)
+        
+        if not queue.current and not queue.queue:
+            await interaction.followup.send("Queue is empty!")
+            return
+        
+        embed = discord.Embed(title="Music Queue", color=discord.Color.blue())
+        
+        if queue.current:
+            embed.add_field(name="Now Playing", value=str(queue.current), inline=False)
+        
+        if queue.queue:
+            queue_str = "\n".join([f"{i+1}. {track}" for i, track in enumerate(queue.queue[:10])])
+            embed.add_field(name="Up Next", value=queue_str, inline=False)
+            
+            if len(queue) > 10:
+                embed.add_field(name="More", value=f"... and {len(queue) - 10} more", inline=False)
+        
+        await interaction.followup.send(embed=embed)
+
+            
 def create_player_embed():
     """Create the music player embed"""
     embed = discord.Embed(
@@ -407,9 +486,9 @@ async def leave(interaction: discord.Interaction):
 
 
 #   Play Music
-@bot.tree.command(name="play", description="Search and play songs", guilds=[guild_id1, guild_id2])
+@bot.tree.command(name="playnow", description="Search and play songs", guilds=[guild_id1, guild_id2])
 @app_commands.autocomplete(query=track_autocomplete)
-async def play(interaction: discord.Interaction, query: str):
+async def playNow(interaction: discord.Interaction, query: str):
 
     await interaction.response.defer()
     
@@ -421,7 +500,7 @@ async def play(interaction: discord.Interaction, query: str):
     results = await navidrome_client.search(query)
     
     if not results:
-        await interaction.followup.send(f'could not find the track')
+        await interaction.followup.send(f'Could not find the track')
         return
 
     print(results)
@@ -455,15 +534,20 @@ async def skip(interaction: discord.Interaction):
         return
     
     else:
-        track = queue.next()
-        voice_client.stop()
-        await interaction.followup.send(f'playing: {track.title} - {track.artist}')
-        await play_track(voice_client, queue.next(), interaction.guild_id)
+        if queue.loop_mode == 2:
+            track = queue.current()
+            await interaction.followup.send(f'Playing: {track.title} - {track.artist}')
+            await play_track(voice_client, queue.current(), interaction.guild_id)
+        else:
+            track = queue.next()
+            voice_client.stop()
+            await interaction.followup.send(f'Playing: {track.title} - {track.artist}')
+            await play_track(voice_client, queue.next(), interaction.guild_id)
     
 #   Add music to Queue Music
-@bot.tree.command(name="queueadd", description="Search and play songs", guilds=[guild_id1, guild_id2])
+@bot.tree.command(name="play", description="Search and play songs", guilds=[guild_id1, guild_id2])
 @app_commands.autocomplete(query=track_autocomplete)
-async def queueAdd(interaction: discord.Interaction, query: str):
+async def play(interaction: discord.Interaction, query: str):
 
     await interaction.response.defer()
     
@@ -475,14 +559,14 @@ async def queueAdd(interaction: discord.Interaction, query: str):
     results = await navidrome_client.search(query)
     
     if not results:
-        await interaction.followup.send(f'could not find the track')
+        await interaction.followup.send(f'Could not find the track')
         return
 
     print(results)
     track = results[0]
     queue = get_queue(interaction.guild_id)
     queue.add(track)
-    await interaction.followup.send(f'playing: {track.title} - {track.artist}')
+    await interaction.followup.send(f'Playing: {track.title} - {track.artist}')
 
     # Start music loop if not already running
     if not queue.is_playing:
@@ -559,14 +643,14 @@ async def loop_cmd(interaction: discord.Interaction):
     
     mode_name = mode_names[next_mode]
     
-    embed = discord.Embed(title="Loop Mode Changed", color=discord.Color.blue())
+    embed = discord.Embed(title="Loop mode changed", color=discord.Color.blue())
     embed.add_field(name="Mode", value=mode_name, inline=False)
     
     await interaction.followup.send(embed=embed)
 
 
 #   Download music using yt-dlp (YouTube-DL fork)
-@bot.tree.command(name="get", description="get new songs", guilds=[guild_id1, guild_id2])
+@bot.tree.command(name="get", description="Get new songs", guilds=[guild_id1, guild_id2])
 async def get(interaction: discord.Interaction, url: str):
 
     await interaction.response.defer(thinking=True)
