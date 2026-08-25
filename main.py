@@ -698,13 +698,13 @@ async def player(interaction: discord.Interaction):
         view=view
     )
 
-    @bot.tree.command(name="help", description="Shows all available commands", guilds=[guild_id1, guild_id2])
-    async def help_command(interaction: discord.Interaction):
-        embed = discord.Embed(title="Available Commands", description="Here are all my commands:")
-        
-        for command in bot.tree.get_commands():
-            embed.add_field(name=f"/{command.name}", value=command.description, inline=False)
-        
-        await interaction.response.send_message(embed=embed)
+@bot.tree.command(name="help", description="Shows all available commands", guilds=[guild_id1, guild_id2])
+async def help_command(interaction: discord.Interaction):
+    embed = discord.Embed(title="Available Commands", description="Here are all my commands:")
+    
+    for command in bot.tree.get_commands():
+        embed.add_field(name=f"/{command.name}", value=command.description, inline=False)
+    
+    await interaction.response.send_message(embed=embed)
 
 bot.run(bot_token)
