@@ -702,7 +702,7 @@ async def player(interaction: discord.Interaction):
 async def help_command(interaction: discord.Interaction):
     embed = discord.Embed(title="Available Commands", description="Here are all my commands:")
     
-    for command in bot.tree.get_commands():
+    for command in bot.tree.command():
         embed.add_field(name=f"/{command.name}", value=command.description, inline=False)
     
     await interaction.response.send_message(embed=embed)
