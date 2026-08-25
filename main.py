@@ -118,6 +118,46 @@ def get_status(node, vmid):
     print(f"[get_status] status_code={r.status_code}, body={r.text!r}")
     return r.json()["data"]["status"]
 
+class PlaySongModal(discord.ui.Modal, title="Search and Play Song"):
+
+    query_input = discord.ui.TextInput(
+        label="Song Title or Query",
+        placeholder="Enter song name, artist, or URL...",
+        required=True,
+        max_length=100,
+        min_length=1
+    )
+
+    async def on_submit(self, interaction: discord.Interaction):
+        await interaction.response.defer()
+
+        query = self.query_input.value.strip()
+
+        voice_client = interaction.guild.voice_client
+        if not voice_client:
+            await interaction.followup.send("Bot is not in a voice channel! Use `/join` first.")
+            return
+
+        results = await navidrome_client.search(query)
+        
+        if not results:
+            await interaction.followup.send(f'could not find the track')
+            return
+
+        print(results)
+        track = results[0]
+        queue = get_queue(interaction.guild_id)
+        queue.is_playing = False
+        voice_client.stop()
+        await interaction.followup.send(f'playing: {track.title} - {track.artist}')
+        await play_track(voice_client, track, interaction.guild_id)
+
+        # Start music loop if not already running
+        if not queue.is_playing:
+            queue.is_playing = True
+            await play_track(voice_client, queue.next(), interaction.guild_id)
+            asyncio.create_task(music_loop(interaction.guild_id))
+
 
 #-------------------------Discord UI Components-------------------------
 
@@ -127,9 +167,7 @@ class MusicPlayerView(discord.ui.View):
  
     @discord.ui.button(label="Play", style=discord.ButtonStyle.success)
     async def play_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        queue = get_queue(interaction.guild_id)
-        queue.is_playing = True
-        await interaction.response.send_message("Now playing: " + queue.current.title if queue.current else "No song selected", ephemeral=True)
+        await interaction.response.send_modal(PlaySongModal())
  
     @discord.ui.button(label="Pause", style=discord.ButtonStyle.danger)
     async def pause_button(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -157,10 +195,17 @@ class MusicPlayerView(discord.ui.View):
     # Stop button to stop playback
     @discord.ui.button(label="Stop", style=discord.ButtonStyle.danger)
     async def stop_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        voice_client = interaction.guild.voice_client
+        if not voice_client:
+            await interaction.followup.send("Bot is not in a voice channel!")
+            return
+
         queue = get_queue(interaction.guild_id)
         queue.is_playing = False
         queue.clear()
         await interaction.response.send_message("Playback stopped and queue cleared", ephemeral=True)
+        
+        voice_client.stop()
 
     # Loop button callback
     @discord.ui.button(label="Loop", style=discord.ButtonStyle.primary)
@@ -200,7 +245,7 @@ def get_queue(guild_id: int) -> MusicQueue:
     return music_queues[guild_id]
 
 
- #  Play a track in voice channel
+#  Play a track in voice channel
 
 async def play_track(voice_client: discord.VoiceClient, track: Track, guild_id: int):
     queue = get_queue(guild_id)
@@ -263,6 +308,28 @@ async def music_loop(guild_id: int):
                 await play_track(voice_client, next_track, guild_id)
             else:
                 queue.is_playing = False
+
+
+#Autocomplete for the play command
+async def track_autocomplete(
+    interaction: discord.Interaction,
+    current: str,
+) -> List[app_commands.Choice[str]]:
+    if len(current) < 2:
+        return []
+    
+    results = await navidrome_client.search(current)
+    
+    # Return up to 25 choices (Discord limit)
+    choices = [
+        app_commands.Choice(
+            name=f"{track.title} - {track.artist}",
+            value=track.title
+        )
+        for track in results[:25]
+    ]
+    return choices
+
 
 #-------------------------------------------Discord Commands-------------------------------------------
 
@@ -339,31 +406,64 @@ async def leave(interaction: discord.Interaction):
     await interaction.response.send_message("Left the voice channel")
 
 
-#Autocomplete for the play command
-async def track_autocomplete(
-    interaction: discord.Interaction,
-    current: str,
-) -> List[app_commands.Choice[str]]:
-    if len(current) < 2:
-        return []
-    
-    results = await navidrome_client.search(current)
-    
-    # Return up to 25 choices (Discord limit)
-    choices = [
-        app_commands.Choice(
-            name=f"{track.title} - {track.artist}",
-            value=track.title
-        )
-        for track in results[:25]
-    ]
-    return choices
-
-
 #   Play Music
 @bot.tree.command(name="play", description="Search and play songs", guilds=[guild_id1, guild_id2])
 @app_commands.autocomplete(query=track_autocomplete)
 async def play(interaction: discord.Interaction, query: str):
+
+    await interaction.response.defer()
+    
+    voice_client = interaction.guild.voice_client
+    if not voice_client:
+        await interaction.followup.send("Bot is not in a voice channel! Use `/join` first.")
+        return
+
+    results = await navidrome_client.search(query)
+    
+    if not results:
+        await interaction.followup.send(f'could not find the track')
+        return
+
+    print(results)
+    track = results[0]
+    queue = get_queue(interaction.guild_id)
+    queue.is_playing = False
+    voice_client.stop()
+    await interaction.followup.send(f'playing: {track.title} - {track.artist}')
+    await play_track(voice_client, track, interaction.guild_id)
+
+    # Start music loop if not already running
+    if not queue.is_playing:
+        queue.is_playing = True
+        await play_track(voice_client, queue.next(), interaction.guild_id)
+        asyncio.create_task(music_loop(interaction.guild_id))
+
+@bot.tree.command(name="skip", description="skip the current song", guilds=[guild_id1, guild_id2])
+async def skip(interaction: discord.Interaction):
+
+    await interaction.response.defer()
+
+    voice_client = interaction.guild.voice_client
+    if not voice_client:
+            await interaction.followup.send("Bot is not in a voice channel! Use `/join` first.")
+            return
+
+    queue = get_queue(interaction.guild_id)
+
+    if not queue.is_playing:
+        await interaction.followup.send("Bot is not playing songs from queue.")
+        return
+    
+    else:
+        track = queue.next()
+        voice_client.stop()
+        await interaction.followup.send(f'playing: {track.title} - {track.artist}')
+        await play_track(voice_client, queue.next(), interaction.guild_id)
+    
+#   Add music to Queue Music
+@bot.tree.command(name="queueadd", description="Search and play songs", guilds=[guild_id1, guild_id2])
+@app_commands.autocomplete(query=track_autocomplete)
+async def queueAdd(interaction: discord.Interaction, query: str):
 
     await interaction.response.defer()
     
@@ -389,7 +489,6 @@ async def play(interaction: discord.Interaction, query: str):
         queue.is_playing = True
         await play_track(voice_client, queue.next(), interaction.guild_id)
         asyncio.create_task(music_loop(interaction.guild_id))
-
 
 #Stop playback and clear queue
 @bot.tree.command(name="stop", description="Stop playback", guilds=[guild_id1, guild_id2])
