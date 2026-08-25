@@ -698,7 +698,7 @@ async def player(interaction: discord.Interaction):
         view=view
     )
 
-    @bot.tree.command(name="help", description="Shows all available commands")
+    @bot.tree.command(name="help", description="Shows all available commands", guilds=[guild_id1, guild_id2])
     async def help_command(interaction: discord.Interaction):
         embed = discord.Embed(title="Available Commands", description="Here are all my commands:")
         
