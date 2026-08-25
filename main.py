@@ -486,7 +486,7 @@ async def leave(interaction: discord.Interaction):
 
 
 #   Play Music
-@bot.tree.command(name="playnow", description="Search and play songs", guilds=[guild_id1, guild_id2])
+@bot.tree.command(name="playnow", description="Search and play songs (stops current song)", guilds=[guild_id1, guild_id2])
 @app_commands.autocomplete(query=track_autocomplete)
 async def playNow(interaction: discord.Interaction, query: str):
 
@@ -545,7 +545,7 @@ async def skip(interaction: discord.Interaction):
             await play_track(voice_client, queue.next(), interaction.guild_id)
     
 #   Add music to Queue Music
-@bot.tree.command(name="play", description="Search and play songs", guilds=[guild_id1, guild_id2])
+@bot.tree.command(name="play", description="Search and play songs (adds song to the end of the queue)", guilds=[guild_id1, guild_id2])
 @app_commands.autocomplete(query=track_autocomplete)
 async def play(interaction: discord.Interaction, query: str):
 
@@ -702,7 +702,7 @@ async def player(interaction: discord.Interaction):
 async def help_command(interaction: discord.Interaction):
     embed = discord.Embed(title="Available Commands", description="Here are all my commands:")
     
-    for command in bot.tree.command():
+    for command in bot.tree.get_commands(guild=discord.Object(id=interaction.guild_id)):
         embed.add_field(name=f"/{command.name}", value=command.description, inline=False)
     
     await interaction.response.send_message(embed=embed)
