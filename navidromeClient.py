@@ -133,7 +133,6 @@ class NavidromeClient:
         salt = secrets.token_hex(3)
         token = hashlib.md5((self.password + salt).encode()).hexdigest()
         timeout = aiohttp.ClientTimeout(total=10)
-        pageSize = 100
         
         while hasMore:
             params = {
@@ -143,13 +142,12 @@ class NavidromeClient:
                 'c': 'Aqua',
                 'v': '1.16.1',
                 'f': 'json',
-                'size': pageSize,
-                'offset': offset
+                'size': 500,
             }
             
             try:
                 async with self.session.get(
-                    f"{self.url}/rest/getSongs.view",
+                    f"{self.url}/rest/getRandomSongs.view",
                     params=params,
                     timeout=timeout
                 ) as resp:
@@ -163,16 +161,11 @@ class NavidromeClient:
                         print(f"Subsonic Error {error_code}: {error_msg}")
                         return allSongs
                     
-                    songs = api_status.get('getSongsResult', {}).get('song', [])
+                    songs = api_status.get('randomSongs', {}).get('song', [])
                     if isinstance(songs, dict):
                         songs = [songs]
 
                 allSongs.extend([Track(song, self.username, self.password, self.url) for song in songs])
-                
-                if len(songs) < pageSize:
-                    hasMore = False
-                else:
-                    offset += pageSize
 
             except aiohttp.ClientError as e:
                 print(f"Network error: {e}")
