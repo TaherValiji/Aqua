@@ -1,8 +1,10 @@
 import secrets
 import hashlib
 import aiohttp
-from musicPlayer import Track, MusicQueue
-from typing import Optional, List
+from musicPlayerModels import Track
+from typing import List
+
+
 
 class NavidromeClient:
     def __init__(self, url: str, username: str, password: str):
@@ -22,8 +24,9 @@ class NavidromeClient:
             await self.session.close()
             self.session = None
 
+
         
- #-------------------------Navidrome API Authentication-------------------------
+    #-------------------------Navidrome API Authentication-------------------------
  
     async def navidromeAuthenticate(self) -> bool:
         """Authenticate with Navidrome using token-based auth"""
@@ -70,7 +73,11 @@ class NavidromeClient:
             traceback.print_exc()
             return False
 
-    # search for songs by name
+
+
+
+    #   Search for songs by name
+
     async def search(self, query: str) -> List[Track]:
         print(f"Searching for track by name: {query}")
         try:
@@ -114,3 +121,61 @@ class NavidromeClient:
             print(f"Network error searching '{query}': {e}")
             return []
         return []
+
+
+
+    #   Get a list of all available songs
+
+    async def getAllSongs(self):
+        allSongs = []
+        offset = 0
+        hasMore = True
+        salt = secrets.token_hex(3)
+        token = hashlib.md5((self.password + salt).encode()).hexdigest()
+        timeout = aiohttp.ClientTimeout(total=10)
+        pageSize = 100
+        
+        while hasMore:
+            params = {
+                'u': self.username,
+                't': token,
+                's': salt,
+                'c': 'Aqua',
+                'v': '1.16.1',
+                'f': 'json',
+                'size': pageSize,
+                'offset': offset
+            }
+            
+            try:
+                async with self.session.get(
+                    f"{self.url}/rest/getSongs.view",
+                    params=params,
+                    timeout=timeout
+                ) as resp:
+                    resp.raise_for_status()
+                    data = await resp.json()
+                    
+                    api_status = data.get('subsonic-response', {})
+                    if api_status.get('status') != 'ok':
+                        error_code = api_status.get('error', {}).get('code')
+                        error_msg = api_status.get('error', {}).get('message', 'Unknown error')
+                        print(f"Subsonic Error {error_code}: {error_msg}")
+                        return allSongs
+                    
+                    songs = api_status.get('getSongsResult', {}).get('song', [])
+                    if isinstance(songs, dict):
+                        songs = [songs]
+
+                allSongs.extend([Track(song, self.username, self.password, self.url) for song in songs])
+                
+                if len(songs) < pageSize:
+                    hasMore = False
+                else:
+                    offset += pageSize
+
+            except aiohttp.ClientError as e:
+                print(f"Network error: {e}")
+                return allSongs
+
+        return allSongs
