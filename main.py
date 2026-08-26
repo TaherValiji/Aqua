@@ -389,8 +389,10 @@ async def get(interaction: discord.Interaction, url: str):
 async def browse(interaction: discord.Interaction):
     await interaction.response.defer()
 
+    print("loading music files")
     await music_browser.load_library()
-    
+
+    print("loading embed")
     embed = discord.Embed(title="Song browser", color=discord.Color.purple())
     page_str = "\n".join([f"{track}" for i, track in enumerate(MusicBrowser.view_current_page(music_browser))])
     embed.add_field(name="Page " + str(MusicBrowser.get_current_page(music_browser)), value=page_str, inline=False)

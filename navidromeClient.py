@@ -127,14 +127,13 @@ class NavidromeClient:
     #   Get a list of all available songs
 
     async def getAllSongs(self):
-        allSongs = []
-        offset = 0
-        hasMore = True
         salt = secrets.token_hex(3)
         token = hashlib.md5((self.password + salt).encode()).hexdigest()
         timeout = aiohttp.ClientTimeout(total=10)
-        
-        while hasMore:
+
+        print(f"Trying to get all songs...")
+
+        try:
             params = {
                 'u': self.username,
                 't': token,
@@ -142,33 +141,29 @@ class NavidromeClient:
                 'c': 'Aqua',
                 'v': '1.16.1',
                 'f': 'json',
-                'size': 500,
+                'size': 50,
             }
-            
-            try:
-                async with self.session.get(
-                    f"{self.url}/rest/getRandomSongs.view",
-                    params=params,
-                    timeout=timeout
-                ) as resp:
-                    resp.raise_for_status()
-                    data = await resp.json()
-                    
-                    api_status = data.get('subsonic-response', {})
-                    if api_status.get('status') != 'ok':
-                        error_code = api_status.get('error', {}).get('code')
-                        error_msg = api_status.get('error', {}).get('message', 'Unknown error')
-                        print(f"Subsonic Error {error_code}: {error_msg}")
-                        return allSongs
-                    
-                    songs = api_status.get('randomSongs', {}).get('song', [])
-                    if isinstance(songs, dict):
-                        songs = [songs]
+            async with self.session.get(
+                f"{self.url}/rest/getRandomSongs.view",
+                params=params,
+                timeout=timeout
+            ) as resp:
+                resp.raise_for_status()
+                data = await resp.json()
+                
+                api_status = data.get('subsonic-response', {})
+                if api_status.get('status') != 'ok':
+                    error_code = api_status.get('error', {}).get('code')
+                    error_msg = api_status.get('error', {}).get('message', 'Unknown error')
+                    print(f"Subsonic Error {error_code}: {error_msg}")
+                    return []
+                
+                songs = api_status.get('randomSongs', {}).get('song', [])
+                if isinstance(songs, dict):
+                    songs = [songs]
 
-                allSongs.extend([Track(song, self.username, self.password, self.url) for song in songs])
+            return [Track(song, self.username, self.password, self.url) for song in songs]
 
-            except aiohttp.ClientError as e:
-                print(f"Network error: {e}")
-                return allSongs
-
-        return allSongs
+        except aiohttp.ClientError as e:
+            print(f"Network error: {e}")
+            return []
