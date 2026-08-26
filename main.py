@@ -394,7 +394,7 @@ async def browse(interaction: discord.Interaction):
 
     print("loading embed")
     embed = discord.Embed(title="Song browser", color=discord.Color.purple())
-    page_str = "\n".join([f"{track}" for i, track in enumerate(MusicBrowser.view_current_page(music_browser))])
+    page_str = "\n".join([f"{track.title}" for i, track in enumerate(MusicBrowser.view_current_page(music_browser))])
     embed.add_field(name="Page " + str(MusicBrowser.get_current_page(music_browser)), value=page_str, inline=False)
 
     view = MusicBrowserView(music_browser)
