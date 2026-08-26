@@ -205,7 +205,7 @@ async def playNow(interaction: discord.Interaction, query: str):
 
 
 # Skip current song
-@bot.tree.command(name="skip", description="skip the current song", guilds=[guild_id1, guild_id2])
+@bot.tree.command(name="skip", description="Skip the current song", guilds=[guild_id1, guild_id2])
 async def skip(interaction: discord.Interaction):
 
     await interaction.response.defer()
