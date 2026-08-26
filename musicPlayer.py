@@ -20,7 +20,7 @@ class MusicBrowser:
     def __init__(self):
         self.all_songs = []
         self.current_page = 0
-        self.page_size = 25
+        self.page_size = 10
 
     def get_current_page(self):
         return self.current_page
