@@ -72,9 +72,9 @@ async def on_message(message):
         try:
             await member.send("boo")
         except discord.Forbidden:
-            await message.channel.send("I don't have permission to send a direct message to that user.")
+            await message.channel.send("I don't have permission to send a direct message to that user.", ephemeral = True)
         except Exception as e:
-            await message.channel.send(f"An error occurred while trying to send a direct message: {e}")
+            await message.channel.send(f"An error occurred while trying to send a direct message: {e}", ephemeral = True)
 
     await bot.process_commands(message)
 
@@ -142,16 +142,16 @@ async def join(interaction: discord.Interaction):
     await interaction.response.defer()  # Defer the response to give the bot more time to process
 
     if not interaction.user.voice or not interaction.user.voice.channel:
-        await interaction.followup.send("You need to be in a voice channel!")
+        await interaction.followup.send("You need to be in a voice channel!", ephemeral = True)
         return
     
     channel = interaction.user.voice.channel
 
     try:
         await channel.connect()
-        await interaction.followup.send(f"Joined {channel.name}")
+        await interaction.followup.send(f"Joined {channel.name}", ephemeral = True)
     except Exception as e:
-        await interaction.followup.send(f"Error joining channel: {e}")
+        await interaction.followup.send(f"Error joining channel: {e}", ephemeral = True)
 
 
 
@@ -160,13 +160,13 @@ async def join(interaction: discord.Interaction):
 async def leave(interaction: discord.Interaction):
     if not interaction.guild.voice_client or not interaction.guild.voice_client.channel:
         await interaction.response.defer()
-        await interaction.followup.send("Not in a voice channel!")
+        await interaction.followup.send("Not in a voice channel!", ephemeral = True)
         return
     
     queue = get_queue(interaction.guild.id)
     queue.clear()
     await interaction.guild.voice_client.disconnect()
-    await interaction.response.send_message("Left the voice channel")
+    await interaction.response.send_message("Left the voice channel", ephemeral = True)
 
 
 
@@ -179,13 +179,13 @@ async def playNow(interaction: discord.Interaction, query: str):
     
     voice_client = interaction.guild.voice_client
     if not voice_client:
-        await interaction.followup.send("Bot is not in a voice channel! Use `/join` first.")
+        await interaction.followup.send("Bot is not in a voice channel! Use `/join` first.", ephemeral = True)
         return
 
     results = await navidrome_client.search(query)
     
     if not results:
-        await interaction.followup.send(f'Could not find the track')
+        await interaction.followup.send(f'Could not find the track', ephemeral = True)
         return
 
     print(results)
@@ -193,7 +193,7 @@ async def playNow(interaction: discord.Interaction, query: str):
     queue = get_queue(interaction.guild_id)
     queue.is_playing = False
     voice_client.stop()
-    await interaction.followup.send(f'playing: {track.title} - {track.artist}')
+    await interaction.followup.send(f'playing: {track.title} - {track.artist}', ephemeral = True)
     await play_track(voice_client, track, interaction.guild_id)
 
     # Start music loop if not already running
@@ -212,24 +212,24 @@ async def skip(interaction: discord.Interaction):
 
     voice_client = interaction.guild.voice_client
     if not voice_client:
-            await interaction.followup.send("Bot is not in a voice channel! Use `/join` first.")
+            await interaction.followup.send("Bot is not in a voice channel! Use `/join` first.", ephemeral = True)
             return
 
     queue = get_queue(interaction.guild_id)
 
     if not queue.is_playing:
-        await interaction.followup.send("Bot is not playing songs from queue.")
+        await interaction.followup.send("Bot is not playing songs from queue.", ephemeral = True)
         return
     
     else:
         if queue.loop_mode == 2:
             track = queue.current()
-            await interaction.followup.send(f'Playing: {track.title} - {track.artist}')
+            await interaction.followup.send(f'Playing: {track.title} - {track.artist}', ephemeral = True)
             await play_track(voice_client, queue.current(), interaction.guild_id)
         else:
             track = queue.next()
             voice_client.stop()
-            await interaction.followup.send(f'Playing: {track.title} - {track.artist}')
+            await interaction.followup.send(f'Playing: {track.title} - {track.artist}', ephemeral = True)
             await play_track(voice_client, queue.next(), interaction.guild_id)
 
 
@@ -243,20 +243,20 @@ async def play(interaction: discord.Interaction, query: str):
     
     voice_client = interaction.guild.voice_client
     if not voice_client:
-        await interaction.followup.send("Bot is not in a voice channel! Use `/join` first.")
+        await interaction.followup.send("Bot is not in a voice channel! Use `/join` first.", ephemeral = True)
         return
 
     results = await navidrome_client.search(query)
     
     if not results:
-        await interaction.followup.send(f'Could not find the track')
+        await interaction.followup.send(f'Could not find the track', ephemeral = True)
         return
 
     print(results)
     track = results[0]
     queue = get_queue(interaction.guild_id)
     queue.add(track)
-    await interaction.followup.send(f'Playing: {track.title} - {track.artist}')
+    await interaction.followup.send(f'Playing: {track.title} - {track.artist}', ephemeral = True)
 
     # Start music loop if not already running
     if not queue.is_playing:
@@ -273,11 +273,11 @@ async def stop(interaction: discord.Interaction):
     
     voice_client = interaction.guild.voice_client
     if not voice_client:
-        await interaction.followup.send("Bot is not in a voice channel!")
+        await interaction.followup.send("Bot is not in a voice channel!", ephemeral = True)
         return
     
     voice_client.stop()
-    await interaction.followup.send("Playback stopped")
+    await interaction.followup.send("Playback stopped", ephemeral = True)
 
 
 
@@ -288,7 +288,7 @@ async def clear_queue(interaction: discord.Interaction):
     
     queue = get_queue(interaction.guild_id)
     queue.clear()
-    await interaction.followup.send("Queue cleared")
+    await interaction.followup.send("Queue cleared", ephemeral = True)
 
 
 
@@ -300,7 +300,7 @@ async def show_queue(interaction: discord.Interaction):
     queue = get_queue(interaction.guild_id)
     
     if not queue.current and not queue.queue:
-        await interaction.followup.send("Queue is empty!")
+        await interaction.followup.send("Queue is empty!", ephemeral = True)
         return
     
     embed = discord.Embed(title="Music Queue", color=discord.Color.blue())
@@ -315,7 +315,7 @@ async def show_queue(interaction: discord.Interaction):
         if len(queue) > 10:
             embed.add_field(name="More", value=f"... and {len(queue) - 10} more", inline=False)
     
-    await interaction.followup.send(embed=embed)
+    await interaction.followup.send(embed=embed, ephemeral = True)
 
 
 
@@ -341,7 +341,7 @@ async def loop_cmd(interaction: discord.Interaction):
     embed = discord.Embed(title="Loop mode changed", color=discord.Color.blue())
     embed.add_field(name="Mode", value=mode_name, inline=False)
     
-    await interaction.followup.send(embed=embed)
+    await interaction.followup.send(embed=embed, ephemeral = True)
 
 
 
@@ -371,16 +371,16 @@ async def get(interaction: discord.Interaction, url: str):
             error_code = ydl.download([url])
 
         if error_code == 0:
-            await interaction.followup.send(f"Successfully added to the music library")
+            await interaction.followup.send(f"Successfully added to the music library", ephemeral = True)
         else:
             print(f"Failed to add the song. Error code: {error_code}")
-            await interaction.followup.send(f"Failed to add the song. Error code: {error_code}")
+            await interaction.followup.send(f"Failed to add the song. Error code: {error_code}"), ephemeral = True
 
     except Exception as e:
         print(f"Full error: {type(e).__name__}: {e}")  # Print full details
         import traceback
         traceback.print_exc() 
-        await interaction.followup.send(f"An error occurred while adding the song: {e}")
+        await interaction.followup.send(f"An error occurred while adding the song: {e}", ephemeral = True)
 
 
 
@@ -401,7 +401,8 @@ async def browse(interaction: discord.Interaction):
 
     await interaction.followup.send(
         embed=embed,
-        view=view
+        view=view,
+        ephemeral = True
     )
 
 
@@ -433,7 +434,7 @@ async def help_command(interaction: discord.Interaction):
     for command in bot.tree.get_commands(guild=discord.Object(id=interaction.guild_id)):
         embed.add_field(name=f"/{command.name}", value=command.description, inline=False)
     
-    await interaction.response.send_message(embed=embed)
+    await interaction.response.send_message(embed=embed, ephemeral = True)
 
 
 

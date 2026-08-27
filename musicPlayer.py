@@ -70,7 +70,8 @@ class MusicBrowserView(discord.ui.View):
         
         await interaction.followup.send(
             embed=embed,
-            view=view
+            view=view,
+            ephemeral = True
             )
 
 
@@ -88,7 +89,8 @@ class MusicBrowserView(discord.ui.View):
         
         await interaction.followup.send(
             embed=embed,
-            view=view
+            view=view,
+            ephemeral = True
             )
 
 
@@ -119,24 +121,24 @@ class MusicPlayerView(discord.ui.View):
         
         voice_client = interaction.guild.voice_client
         if not voice_client:
-                await interaction.followup.send("Bot is not in a voice channel! Use `/join` first.")
+                await interaction.followup.send("Bot is not in a voice channel! Use `/join` first.", ephemeral = True)
                 return
         
         queue = get_queue(interaction.guild_id)
         
         if not queue.is_playing:
-            await interaction.followup.send("Bot is not playing songs from queue.")
+            await interaction.followup.send("Bot is not playing songs from queue.", ephemeral = True)
             return
             
         else:
             if queue.loop_mode == 2:
                 track = queue.current()
-                await interaction.followup.send(f'Playing: {track.title} - {track.artist}')
+                await interaction.followup.send(f'Playing: {track.title} - {track.artist}', ephemeral = True)
                 await play_track(voice_client, queue.current(), interaction.guild_id)
             else:
                 track = queue.next()
                 voice_client.stop()
-                await interaction.followup.send(f'Playing: {track.title} - {track.artist}')
+                await interaction.followup.send(f'Playing: {track.title} - {track.artist}', ephemeral = True)
                 await play_track(voice_client, queue.next(), interaction.guild_id)
 
 
@@ -145,7 +147,7 @@ class MusicPlayerView(discord.ui.View):
     async def stop_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         voice_client = interaction.guild.voice_client
         if not voice_client:
-            await interaction.followup.send("Bot is not in a voice channel!")
+            await interaction.followup.send("Bot is not in a voice channel!", ephemeral = True)
             return
         
         await interaction.response.send_message("Playback stopped", ephemeral=True)
@@ -159,7 +161,7 @@ class MusicPlayerView(discord.ui.View):
         await interaction.response.defer()    
         queue = get_queue(interaction.guild_id)
         queue.clear()
-        await interaction.followup.send("Queue cleared")
+        await interaction.followup.send("Queue cleared", ephemeral = True)
 
 
     # Loop button callback
@@ -203,7 +205,7 @@ class MusicPlayerView(discord.ui.View):
             if len(queue) > 10:
                 embed.add_field(name="More", value=f"... and {len(queue) - 10} more", inline=False)
         
-        await interaction.followup.send(embed=embed)
+        await interaction.followup.send(embed=embed, ephemeral = True)
 
 
 
@@ -323,13 +325,13 @@ class PlayNowSongModal(discord.ui.Modal, title="Search and play songs"):
 
         voice_client = interaction.guild.voice_client
         if not voice_client:
-            await interaction.followup.send("Bot is not in a voice channel! Use `/join` first.")
+            await interaction.followup.send("Bot is not in a voice channel! Use `/join` first.", ephemeral = True)
             return
 
         results = await navidrome_client.search(query)
         
         if not results:
-            await interaction.followup.send(f'Could not find the track')
+            await interaction.followup.send(f'Could not find the track', ephemeral = True)
             return
 
         print(results)
@@ -337,7 +339,7 @@ class PlayNowSongModal(discord.ui.Modal, title="Search and play songs"):
         queue = get_queue(interaction.guild_id)
         queue.is_playing = False
         voice_client.stop()
-        await interaction.followup.send(f'playing: {track.title} - {track.artist}')
+        await interaction.followup.send(f'playing: {track.title} - {track.artist}', ephemeral = True)
         await play_track(voice_client, track, interaction.guild_id)
 
         # Start music loop if not already running
@@ -365,20 +367,20 @@ class PlaySongModal(discord.ui.Modal, title="Add a song to the queue"):
             
         voice_client = interaction.guild.voice_client
         if not voice_client:
-            await interaction.followup.send("Bot is not in a voice channel! Use `/join` first.")
+            await interaction.followup.send("Bot is not in a voice channel! Use `/join` first.", ephemeral = True)
             return
     
         results = await navidrome_client.search(query)
         
         if not results:
-            await interaction.followup.send(f'Could not find the track')
+            await interaction.followup.send(f'Could not find the track', ephemeral = True)
             return
     
         print(results)
         track = results[0]
         queue = get_queue(interaction.guild_id)
         queue.add(track)
-        await interaction.followup.send(f'Playing: {track.title} - {track.artist}')
+        await interaction.followup.send(f'Playing: {track.title} - {track.artist}', ephemeral = True)
     
         # Start music loop if not already running
         if not queue.is_playing:
