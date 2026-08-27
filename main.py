@@ -374,7 +374,7 @@ async def get(interaction: discord.Interaction, url: str):
             await interaction.followup.send(f"Successfully added to the music library", ephemeral = True)
         else:
             print(f"Failed to add the song. Error code: {error_code}")
-            await interaction.followup.send(f"Failed to add the song. Error code: {error_code}"), ephemeral = True
+            await interaction.followup.send(f"Failed to add the song. Error code: {error_code}", ephemeral = True)
 
     except Exception as e:
         print(f"Full error: {type(e).__name__}: {e}")  # Print full details
