@@ -476,7 +476,7 @@ async def getPlaylist(interaction: discord.Interaction, url: str):
         song_ids_to_add: List[str] = []
         
         for song in downloaded_songs:
-            search_results = navidrome_client.search(song['title'])
+            search_results = await navidrome_client.search(song['title'])
             
             if search_results:
                 song_id = search_results[0].get('id')
