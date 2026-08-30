@@ -434,8 +434,6 @@ async def getPlaylist(interaction: discord.Interaction, url: str):
             info = ydl.extract_info(url, download=True)
             entries = info.get('entries', [])
 
-
-
             for entry in entries:
                 if entry:
                     downloaded_songs.append({
@@ -456,16 +454,16 @@ async def getPlaylist(interaction: discord.Interaction, url: str):
         )
 
         # Check if playlist exists
-        existing_playlist = navidrome_client.getPlaylistByName(playlist_name)
+        existing_playlist = await navidrome_client.getPlaylistByName(playlist_name)
 
         if existing_playlist:
             playlist_id = existing_playlist('id')
             print(f"Playlist exists with ID: {playlist_id}. Clearing and updating...")
-            navidrome_client.clearPlaylist(playlist_id)
+            await navidrome_client.clearPlaylist(playlist_id)
 
         else:
             # Create new playlist
-            playlist_id = navidrome_client.createPlaylist(playlist_name)
+            playlist_id = await navidrome_client.createPlaylist(playlist_name)
             if not playlist_id:
                 await interaction.followup.send(
                     f"Failed to create Navidrome playlist :/",

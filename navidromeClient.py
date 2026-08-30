@@ -286,3 +286,58 @@ class NavidromeClient:
         except Exception as e:
             print(f"Error getting playlist: {e}")
         return None
+
+    # Remove all songs from playlist
+    async def clearPlaylist(self, playlist_id: str) -> bool:
+        salt = secrets.token_hex(3)
+        token = hashlib.md5((self.password + salt).encode()).hexdigest()
+
+        try:
+            params = {
+            'u': self.username,
+            't': token,
+            's': salt,
+            'c': 'Aqua',
+            'v': '1.16.1',
+            'f': 'json',
+            'PlaylistId': playlist_id
+            }
+
+            timeout = aiohttp.ClientTimeout(total=10)
+            async with self.session.get(
+                f"{self.url}/getPlaylist.view",
+                params=params,
+                timeout=timeout
+            ) as resp:
+                resp.raise_for_status()
+                data = await resp.json()
+
+                api_status = data.get('subsonic-response', {})
+                if api_status.get('status') != 'ok':
+                    error_code = api_status.get('error', {}).get('code')
+                    error_msg = api_status.get('error', {}).get('message', 'Unknown error')
+                    print(f"Subsonic Error {error_code}: {error_msg}")
+                    return False
+
+            songs = data.json().get('subsonic-response', {}).get('playlist', {}).get('entry', [])
+            
+            for i in range(len(songs) -1, -1, -1):
+                timeout = aiohttp.ClientTimeout(total=10)
+                async with self.session.get(
+                    f"{self.url}/updatePlaylist.view",
+                    params={**params, 'songIndexToRemove': i},
+                    timeout=timeout
+                ) as resp:
+                    resp.raise_for_status()
+                    data = await resp.json()
+    
+                    api_status = data.get('subsonic-response', {})
+                    if api_status.get('status') != 'ok':
+                        error_code = api_status.get('error', {}).get('code')
+                        error_msg = api_status.get('error', {}).get('message', 'Unknown error')
+                        print(f"Subsonic Error {error_code}: {error_msg}")
+                        return False
+            return True
+        except Exception as e:
+            print(f"Error clearing playlist: {e}")
+        return False
