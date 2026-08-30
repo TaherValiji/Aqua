@@ -307,7 +307,7 @@ class NavidromeClient:
             'c': 'Aqua',
             'v': '1.16.1',
             'f': 'json',
-            'PlaylistId': playlist_id
+            'id': playlist_id
             }
 
             timeout = aiohttp.ClientTimeout(total=10)
