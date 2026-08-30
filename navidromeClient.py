@@ -326,7 +326,7 @@ class NavidromeClient:
                     print(f"Subsonic Error {error_code}: {error_msg}")
                     return False
 
-            songs = data.json().get('subsonic-response', {}).get('playlist', {}).get('entry', [])
+            songs = data.get('subsonic-response', {}).get('playlist', {}).get('entry', [])
             
             for i in range(len(songs) -1, -1, -1):
                 timeout = aiohttp.ClientTimeout(total=10)
