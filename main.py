@@ -397,8 +397,8 @@ async def getPlaylist(interaction: discord.Interaction, url: str):
     ydl_opts = {
     'format': 'm4a/bestaudio/best',
     'noplaylist': False,
-    'sleep_interval_requests': 3,
-    'sleep_interval': 5,
+    'sleep_interval_requests': 1,
+    'sleep_interval': 3,
     'max_sleep_interval': 10,
     'ratelimit': 3145728,
     'js_runtimes': {'node': {}},
