@@ -331,7 +331,7 @@ class NavidromeClient:
             for i in range(len(songs) -1, -1, -1):
                 timeout = aiohttp.ClientTimeout(total=10)
                 async with self.session.get(
-                    f"{self.url}/updatePlaylist.view",
+                    f"{self.url}/rest/updatePlaylist.view",
                     params={**params, 'songIndexToRemove': i},
                     timeout=timeout
                 ) as resp:
