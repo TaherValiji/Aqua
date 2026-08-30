@@ -174,6 +174,7 @@ class NavidromeClient:
         salt = secrets.token_hex(3)
         token = hashlib.md5((self.password + salt).encode()).hexdigest()
 
+        print (name)
         try:
             params = {
                 'u': self.username,
