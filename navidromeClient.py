@@ -196,7 +196,7 @@ class NavidromeClient:
                 content_type = resp.headers.get('content-type', 'unknown')
                 text = await resp.text()
                 if 'text/html' in content_type:
-                    print(f"Got HTML instead of JSON! Content: {text[:1000]}")
+                    print(f"Got HTML instead of JSON! Content: {text}")
                     return None
             
                 data = await resp.json()
