@@ -312,7 +312,7 @@ class NavidromeClient:
 
             timeout = aiohttp.ClientTimeout(total=10)
             async with self.session.get(
-                f"{self.url}/getPlaylist.view",
+                f"{self.url}/rest/getPlaylist.view",
                 params=params,
                 timeout=timeout
             ) as resp:
