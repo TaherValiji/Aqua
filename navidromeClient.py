@@ -236,7 +236,7 @@ class NavidromeClient:
                 params[f'songIdToAdd'] = song_id
             timeout = aiohttp.ClientTimeout(total=10)
             async with self.session.get(
-                f"{self.url}/updatePlaylist.view",
+                f"{self.url}/rest/updatePlaylist.view",
                 params=params,
                 timeout=timeout
             ) as resp:
