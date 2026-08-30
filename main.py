@@ -4,6 +4,7 @@ from discord import app_commands
 import requests
 import asyncio
 import yt_dlp
+from typing import List
 from musicPlayer import (
     MusicBrowser,
     MusicPlayerView,
@@ -355,6 +356,7 @@ async def get(interaction: discord.Interaction, url: str):
 
     ydl_opts = {
     'format': 'm4a/bestaudio/best',
+    'noplaylist': True,
     'js_runtimes': {'node': {}},
     'outtmpl': os.path.join(music_library_path, '%(title)s.%(ext)s'),
     'http_headers': {
@@ -382,6 +384,133 @@ async def get(interaction: discord.Interaction, url: str):
         traceback.print_exc() 
         await interaction.followup.send(f"An error occurred while adding the song: {e}", ephemeral = True)
 
+
+
+# Download music using yt-dlp (YouTube-DL fork)
+@bot.tree.command(name="getplaylist", description="Get new playlist", guilds=[guild_id1, guild_id2])
+async def getPlaylist(interaction: discord.Interaction, url: str):
+
+    await interaction.response.defer(thinking=True)
+
+    os.makedirs(music_library_path, exist_ok=True)
+
+    ydl_opts = {
+    'format': 'm4a/bestaudio/best',
+    'noplaylist': False,
+    'sleep_interval_requests': 3,
+    'sleep_interval': 5,
+    'max_sleep_interval': 10,
+    'ratelimit': 3145728,
+    'js_runtimes': {'node': {}},
+    'outtmpl': os.path.join(music_library_path, '%(title)s.%(ext)s'),
+    'http_headers': {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+    },
+    'postprocessors': [{
+        'key': 'FFmpegExtractAudio',
+        'preferredcodec': 'm4a',
+    }],
+    }
+
+    downloaded_songs = []
+    playlist_name = None
+
+    try:
+        # Extract playlist info without downloading
+        with yt_dlp.YoutubeDL({'extract_flat': False, 'quiet': True}) as ydl:
+            info = ydl.extract_info(url, download=False)
+            playlist_name = info.get('title', 'Unknown')
+            entries = info.get('entries', [])
+            
+            print(f"Found playlist: '{playlist_name}' with {len(entries)} songs")
+            await interaction.followup.send(
+                f"Found playlist: {playlist_name} with {len(entries)} songs\nStarting download and sync...",
+                ephemeral=True
+            )
+
+        # Download the playlist
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            error_code = ydl.download([url])
+            info = ydl.extract_info(url, download=True)
+            entries = info.get('entries', [])
+
+
+
+            for entry in entries:
+                if entry:
+                    downloaded_songs.append({
+                        'title': entry.get('title', 'Unknown'),
+                        'ext': entry.get('ext', 'm4a'),
+                    })
+    
+        if error_code == 0:
+                await interaction.followup.send(f"Successfully Downloaded {len(downloaded_songs)} songs", ephemeral = True)
+        else:
+            print(f"Failed to add the songs. Error code: {error_code}")
+            await interaction.followup.send(f"Failed to add the songs. :/", ephemeral = True)
+
+        # Sync with Navidrome
+        await interaction.followup.send(
+            f"Downloaded {len(downloaded_songs)} songs. Syncing to Navidrome...",
+            ephemeral=True
+        )
+
+        # Check if playlist exists
+        existing_playlist = navidrome_client.getPlaylistByName(playlist_name)
+
+        if existing_playlist:
+            playlist_id = existing_playlist('id')
+            print(f"Playlist exists with ID: {playlist_id}. Clearing and updating...")
+            navidrome_client.clearPlaylist(playlist_id)
+
+        else:
+            # Create new playlist
+            playlist_id = navidrome_client.createPlaylist(playlist_name)
+            if not playlist_id:
+                await interaction.followup.send(
+                    f"Failed to create Navidrome playlist :/",
+                    ephemeral=True
+                )
+                return
+
+        # Search for and add songs to playlist
+        song_ids_to_add: List[str] = []
+        
+        for song in downloaded_songs:
+            search_results = navidrome_client.search(song['title'])
+            
+            if search_results:
+                song_id = search_results[0].get('id')
+                song_ids_to_add.append(song_id)
+                print(f"Found song in Navidrome: {song['title']}")
+            else:
+                print(f"Song not found in Navidrome: {song['title']}")
+        
+        # Add all songs to the playlist
+        if song_ids_to_add:
+            success = navidrome_client.addSongsToPlaylist(playlist_id, song_ids_to_add)
+            
+            if success:
+                await interaction.followup.send(
+                    f"Successfully synced '{len(song_ids_to_add)}/{len(downloaded_songs)}' songs to Navidrome playlist '{playlist_name}'",
+                    ephemeral=True
+                )
+            else:
+                await interaction.followup.send(
+                    f"Downloaded songs but failed to add to Navidrome playlist",
+                    ephemeral=True
+                )
+        else:
+            await interaction.followup.send(
+                f"Downloaded {len(downloaded_songs)} songs but none found in Navidrome. Check that Navidrome has scanned the music folder.",
+                ephemeral=True
+            )
+
+    except Exception as e:
+        print(f"Full error: {type(e).__name__}: {e}")  # Print full details
+        import traceback
+        traceback.print_exc() 
+        await interaction.followup.send(f"An error occurred while adding the playlist. :/", ephemeral = True)
 
 
 # Browse music

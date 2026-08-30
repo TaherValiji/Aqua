@@ -2,7 +2,7 @@ import secrets
 import hashlib
 import aiohttp
 from musicPlayerModels import Track
-from typing import List
+from typing import List, Optional, Dict
 
 
 
@@ -167,3 +167,96 @@ class NavidromeClient:
         except aiohttp.ClientError as e:
             print(f"Network error: {e}")
             return []
+
+
+    # Create a new playlist and return its ID
+    async def createPlaylist(self, name: str) -> Optional[str]:
+        salt = secrets.token_hex(3)
+        token = hashlib.md5((self.password + salt).encode()).hexdigest()
+
+        try:
+            params = {
+                'u': self.username,
+                't': token,
+                's': salt,
+                'c': 'Aqua',
+                'v': '1.16.1',
+                'f': 'json',
+                'name': name,
+            }
+
+            timeout = aiohttp.ClientTimeout(total=10)
+            async with self.session.get(
+                f"{self.url}/createPlaylist.view",
+                params=params,
+                timeout=timeout
+            ) as resp:
+                resp.raise_for_status()
+                data = await resp.json()
+
+                api_status = data.get('subsonic-response', {})
+                if api_status.get('status') != 'ok':
+                    error_code = api_status.get('error', {}).get('code')
+                    error_msg = api_status.get('error', {}).get('message', 'Unknown error')
+                    print(f"Subsonic Error {error_code}: {error_msg}")
+                    return []
+
+                
+                playlist_id = data.get('subsonic-response', {}).get('playlist', {}).get('id')
+                print(f"Created playlist '{name}' with ID: {playlist_id}")
+                return playlist_id
+        except Exception as e:
+            print(f"Error creating playlist: {e}")
+        return None
+
+    # Add songs to a playlist
+    async def addSongsToPlaylist(self, playlist_id: str, song_ids: List[str]) -> bool:
+        salt = secrets.token_hex(3)
+        token = hashlib.md5((self.password + salt).encode()).hexdigest()
+        
+        try:
+            params = {
+            'u': self.username,
+            't': token,
+            's': salt,
+            'c': 'Aqua',
+            'v': '1.16.1',
+            'f': 'json',
+            'playlistId': playlist_id,
+            }
+
+            for song_id in song_ids:
+                params[f'songIdToAdd'] = song_id
+            timeout = aiohttp.ClientTimeout(total=10)
+            async with self.session.get(
+                f"{self.url}/updatePlaylist.view",
+                params=params,
+                timeout=timeout
+            ) as resp:
+                resp.raise_for_status()
+                data = await resp.json()
+
+                api_status = data.get('subsonic-response', {})
+                if api_status.get('status') != 'ok':
+                    error_code = api_status.get('error', {}).get('code')
+                    error_msg = api_status.get('error', {}).get('message', 'Unknown error')
+                    print(f"Subsonic Error {error_code}: {error_msg}")
+                    return []
+                
+        except Exception as e:
+            print(f"Error adding songs to playlist: {e}")
+        return False
+
+
+    # Get playlist by name
+    def getPlaylistByName(self, name: str) -> Optional[Dict]:
+        try:
+            response = self.session.get(f"{self.url}/getPlaylists.view")
+            if response.status_code == 200:
+                data = response.json()
+                for playlist in data.get('subsonic-response', {}).get('playlists', {}).get('playlist', []):
+                    if playlist.get('name') == name:
+                        return playlist
+        except Exception as e:
+            print(f"Error getting playlist: {e}")
+        return None
