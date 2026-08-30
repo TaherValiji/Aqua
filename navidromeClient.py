@@ -187,7 +187,7 @@ class NavidromeClient:
 
             timeout = aiohttp.ClientTimeout(total=10)
             async with self.session.get(
-                f"{self.url}/createPlaylist.view",
+                f"{self.url}/rest/createPlaylist.view",
                 params=params,
                 timeout=timeout
             ) as resp:
@@ -206,7 +206,7 @@ class NavidromeClient:
                     error_code = api_status.get('error', {}).get('code')
                     error_msg = api_status.get('error', {}).get('message', 'Unknown error')
                     print(f"Subsonic Error {error_code}: {error_msg}")
-                    return []
+                    return None
 
                 
                 playlist_id = data.get('subsonic-response', {}).get('playlist', {}).get('id')
