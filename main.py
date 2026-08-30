@@ -463,6 +463,7 @@ async def getPlaylist(interaction: discord.Interaction, url: str):
 
         else:
             # Create new playlist
+            print('playlist name : ' + playlist_name)
             playlist_id = await navidrome_client.createPlaylist(playlist_name)
             if not playlist_id:
                 await interaction.followup.send(
