@@ -387,7 +387,7 @@ async def get(interaction: discord.Interaction, url: str):
 
 
 # Download music using yt-dlp (YouTube-DL fork)
-@bot.tree.command(name="getplaylist", description="Get new playlist", guilds=[guild_id1, guild_id2])
+@bot.tree.command(name="getplaylist", description="Get new playlist", guilds=[guild_id1])
 async def getPlaylist(interaction: discord.Interaction, url: str):
 
     await interaction.response.defer(thinking=True)
