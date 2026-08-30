@@ -249,14 +249,40 @@ class NavidromeClient:
 
 
     # Get playlist by name
-    def getPlaylistByName(self, name: str) -> Optional[Dict]:
+    async def getPlaylistByName(self, name: str) -> Optional[Dict]:
+        salt = secrets.token_hex(3)
+        token = hashlib.md5((self.password + salt).encode()).hexdigest()
+                    
         try:
-            response = self.session.get(f"{self.url}/getPlaylists.view")
-            if response.status_code == 200:
-                data = response.json()
+            params = {
+            'u': self.username,
+            't': token,
+            's': salt,
+            'c': 'Aqua',
+            'v': '1.16.1',
+            'f': 'json',
+            }
+
+            timeout = aiohttp.ClientTimeout(total=10)
+            async with self.session.get(
+                f"{self.url}/getPlaylists.view",
+                params=params,
+                timeout=timeout
+            ) as resp:
+                resp.raise_for_status()
+                data = await resp.json()
+
+                api_status = data.get('subsonic-response', {})
+                if api_status.get('status') != 'ok':
+                    error_code = api_status.get('error', {}).get('code')
+                    error_msg = api_status.get('error', {}).get('message', 'Unknown error')
+                    print(f"Subsonic Error {error_code}: {error_msg}")
+                    return []
+                
                 for playlist in data.get('subsonic-response', {}).get('playlists', {}).get('playlist', []):
                     if playlist.get('name') == name:
                         return playlist
+                    
         except Exception as e:
             print(f"Error getting playlist: {e}")
         return None
