@@ -192,6 +192,13 @@ class NavidromeClient:
                 timeout=timeout
             ) as resp:
                 resp.raise_for_status()
+
+                content_type = resp.headers.get('content-type', 'unknown')
+                text = await resp.text()
+                if 'text/html' in content_type:
+                    print(f"Got HTML instead of JSON! Content: {text[:500]}")
+                    return None
+            
                 data = await resp.json()
 
                 api_status = data.get('subsonic-response', {})
