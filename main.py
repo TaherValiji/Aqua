@@ -457,7 +457,7 @@ async def getPlaylist(interaction: discord.Interaction, url: str):
         existing_playlist = await navidrome_client.getPlaylistByName(playlist_name)
 
         if existing_playlist:
-            playlist_id = existing_playlist('id')
+            playlist_id = existing_playlist.get('id')
             print(f"Playlist exists with ID: {playlist_id}. Clearing and updating...")
             await navidrome_client.clearPlaylist(playlist_id)
 
@@ -479,7 +479,7 @@ async def getPlaylist(interaction: discord.Interaction, url: str):
             search_results = await navidrome_client.search(song['title'])
             
             if search_results:
-                song_id = search_results[0].get('id')
+                song_id = search_results[0].id
                 song_ids_to_add.append(song_id)
                 print(f"Found song in Navidrome: {song['title']}")
             else:
@@ -487,7 +487,7 @@ async def getPlaylist(interaction: discord.Interaction, url: str):
         
         # Add all songs to the playlist
         if song_ids_to_add:
-            success = navidrome_client.addSongsToPlaylist(playlist_id, song_ids_to_add)
+            success = await navidrome_client.addSongsToPlaylist(playlist_id, song_ids_to_add)
             
             if success:
                 await interaction.followup.send(
