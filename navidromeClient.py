@@ -327,12 +327,23 @@ class NavidromeClient:
                     return False
 
             songs = data.get('subsonic-response', {}).get('playlist', {}).get('entry', [])
-            
+
+            updateParams = {
+                        'u': self.username,
+                        't': token,
+                        's': salt,
+                        'c': 'Aqua',
+                        'v': '1.16.1',
+                        'f': 'json',
+                        'playlistId': playlist_id,
+                        'songIndexToRemove': 1
+                        }
+
             for i in range(len(songs) -1, -1, -1):
                 timeout = aiohttp.ClientTimeout(total=10)
                 async with self.session.get(
                     f"{self.url}/rest/updatePlaylist.view",
-                    params={**params, 'songIndexToRemove': i},
+                    params=updateParams,
                     timeout=timeout
                 ) as resp:
                     resp.raise_for_status()
