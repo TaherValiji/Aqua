@@ -173,8 +173,7 @@ class NavidromeClient:
     async def createPlaylist(self, name: str) -> Optional[str]:
         salt = secrets.token_hex(3)
         token = hashlib.md5((self.password + salt).encode()).hexdigest()
-
-        print (name)
+        
         try:
             params = {
                 'u': self.username,
@@ -197,7 +196,7 @@ class NavidromeClient:
                 content_type = resp.headers.get('content-type', 'unknown')
                 text = await resp.text()
                 if 'text/html' in content_type:
-                    print(f"Got HTML instead of JSON! Content: {text[:500]}")
+                    print(f"Got HTML instead of JSON! Content: {text[:1000]}")
                     return None
             
                 data = await resp.json()
