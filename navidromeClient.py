@@ -248,7 +248,9 @@ class NavidromeClient:
                     error_code = api_status.get('error', {}).get('code')
                     error_msg = api_status.get('error', {}).get('message', 'Unknown error')
                     print(f"Subsonic Error {error_code}: {error_msg}")
-                    return []
+                    return False
+                else:
+                    return True
                 
         except Exception as e:
             print(f"Error adding songs to playlist: {e}")
