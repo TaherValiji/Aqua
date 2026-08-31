@@ -234,23 +234,22 @@ class NavidromeClient:
 
             for song_id in song_ids:
                 params[f'songIdToAdd'] = song_id
-            timeout = aiohttp.ClientTimeout(total=10)
-            async with self.session.get(
-                f"{self.url}/rest/updatePlaylist.view",
-                params=params,
-                timeout=timeout
-            ) as resp:
-                resp.raise_for_status()
-                data = await resp.json()
+                timeout = aiohttp.ClientTimeout(total=10)
+                async with self.session.get(
+                    f"{self.url}/rest/updatePlaylist.view",
+                    params=params,
+                    timeout=timeout
+                ) as resp:
+                    resp.raise_for_status()
+                    data = await resp.json()
 
-                api_status = data.get('subsonic-response', {})
-                if api_status.get('status') != 'ok':
-                    error_code = api_status.get('error', {}).get('code')
-                    error_msg = api_status.get('error', {}).get('message', 'Unknown error')
-                    print(f"Subsonic Error {error_code}: {error_msg}")
-                    return False
-                else:
-                    return True
+                    api_status = data.get('subsonic-response', {})
+                    if api_status.get('status') != 'ok':
+                        error_code = api_status.get('error', {}).get('code')
+                        error_msg = api_status.get('error', {}).get('message', 'Unknown error')
+                        print(f"Subsonic Error {error_code}: {error_msg}")
+                        return False
+            return True
                 
         except Exception as e:
             print(f"Error adding songs to playlist: {e}")

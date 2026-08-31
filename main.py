@@ -433,7 +433,6 @@ async def getPlaylist(interaction: discord.Interaction, url: str):
             error_code = ydl.download([url])
             info = ydl.extract_info(url, download=True)
             entries = info.get('entries', [])
-            print(entries)
 
             for entry in entries:
                 if entry:
