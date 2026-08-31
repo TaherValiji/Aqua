@@ -337,7 +337,7 @@ class NavidromeClient:
                         'v': '1.16.1',
                         'f': 'json',
                         'playlistId': playlist_id,
-                        'songIndexToRemove': 1
+                        'songIndexToRemove': 0
                         }
 
             for i in range(len(songs) -1, -1, -1):
