@@ -423,8 +423,8 @@ async def getPlaylist(interaction: discord.Interaction, url: str):
     'format': 'm4a/bestaudio/best',
     'noplaylist': False,
     'sleep_interval_requests': 1,
-    'sleep_interval': 3,
-    'max_sleep_interval': 10,
+    'sleep_interval': 1.5,
+    'max_sleep_interval': 5,
     'ratelimit': 3145728,
     'js_runtimes': {'node': {}},
     'outtmpl': os.path.join(music_library_path, '%(title)s.%(ext)s'),
@@ -439,6 +439,8 @@ async def getPlaylist(interaction: discord.Interaction, url: str):
 
     downloaded_songs = []
     playlist_name = None
+    error_count = 0
+    max_errors = 3
 
     try:
         # Extract playlist info without downloading
@@ -452,25 +454,41 @@ async def getPlaylist(interaction: discord.Interaction, url: str):
                 f"Found playlist: {playlist_name} with {len(entries)} songs\nStarting download and sync...",
                 ephemeral=True
             )
+                # Download each song individually with error tracking
 
-        # Download the playlist
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            error_code = ydl.download([url])
-            info = ydl.extract_info(url, download=True)
-            entries = info.get('entries', [])
+        for idx, entry in enumerate(entries, 1):
 
-            for entry in entries:
-                if entry:
-                    downloaded_songs.append({
-                        'title': entry.get('title', 'Unknown'),
-                        'ext': entry.get('ext', 'm4a'),
-                    })
+            if error_count >= max_errors:
+                print(f"Reached {max_errors} errors. Stopping download.")
+                await interaction.followup.send(f"Stopped after {max_errors} errors at song {idx}/{len(entries)}",ephemeral=True)
+                break
+
+            if not entry:
+                continue
+
+            song_title = entry.get('title', 'Unknown')
+            song_url = entry.get('webpage_url', entry.get('url'))
+
+            try:
+                print(f"[{idx}/{len(entries)}] Downloading: {song_title}")
+                with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                    ydl.download([song_url])
     
-        if error_code == 0:
-                await interaction.followup.send(f"Successfully Downloaded {len(downloaded_songs)} songs", ephemeral = True)
-        else:
-            print(f"Failed to add the songs. Error code: {error_code}")
-            await interaction.followup.send(f"Failed to add the songs. :/", ephemeral = True)
+                downloaded_songs.append({
+                    'title': song_title,
+                    'ext': entry.get('ext', 'm4a'),
+                })
+                print(f"Successfully downloaded: {song_title}")
+
+            except Exception as e:
+                error_count += 1
+                error_msg = f"{type(e).__name__}: {str(e)}"
+                print(f"Error #{error_count}/{max_errors} downloading '{song_title}': {error_msg}")
+
+                if error_count >= max_errors:
+                    print(f"Reached {max_errors} errors. Stopping download.")
+                    await interaction.followup.send(f"Stopped after {max_errors} errors. Downloaded {len(downloaded_songs)}/{idx} songs.",ephemeral=True)
+                    break
 
         # Sync with Navidrome
         await interaction.followup.send(
