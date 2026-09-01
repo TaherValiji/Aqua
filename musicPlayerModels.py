@@ -39,6 +39,16 @@ class Track:
         return f"{self.title} - {self.artist}"
 
 
+#-------------------------Playlist information class-------------------------
+class Playlist:
+    def __init__(self, data, username, password, server_url):
+        self.id = data.get('id')
+        self.name = data.get('name')
+        self.songCount = data.get('songCount')
+        self.username = username
+        self.password = password
+        self.server_url = server_url
+
 
 #-------------------------Queue class for managing playlist-------------------------
 
@@ -71,6 +81,9 @@ class MusicQueue:
         self.is_playing = False
         self.loop_mode = 0
 
+    def addMultiple(self, tracks: List[Track]):
+        self.queue = self.queue + tracks
+        
     
     def __len__(self):
         return len(self.queue)

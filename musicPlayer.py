@@ -8,6 +8,7 @@ from config import (
 import asyncio
 from discord import app_commands
 from musicPlayerModels import (
+    Playlist,
     Track,
     MusicQueue
     )
@@ -284,11 +285,8 @@ async def music_loop(guild_id: int):
 
 
 
-# Autocomplete for the play command
-async def track_autocomplete(
-    interaction: discord.Interaction,
-    current: str,
-) -> List[app_commands.Choice[str]]:
+# Autocomplete for the add play command
+async def track_autocomplete(interaction: discord.Interaction, current: str,) -> List[app_commands.Choice[str]]:
     if len(current) < 2:
         return []
     
@@ -304,7 +302,19 @@ async def track_autocomplete(
     ]
     return choices
 
-
+# Autocomplete for the add playlist command
+async def playlist_autocomplete(interaction: discord.Interaction, current:str) -> List[app_commands.Choice[str]]:
+    results = await navidrome_client.getPlaylists()
+    
+    # Return up to 25 choices (Discord limit)
+    choices = [
+        app_commands.Choice(
+            name=f"{playlist.name} - {playlist.songCount} songs",
+            value=f"{playlist.id}|{playlist.name}|{playlist.songCount}"
+        )
+        for playlist in results[:25]
+    ]
+    return choices
 
 #-------------------------Discord Modal UI-------------------------
 

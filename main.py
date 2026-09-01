@@ -11,6 +11,7 @@ from musicPlayer import (
     MusicBrowserView,
     get_queue,
     track_autocomplete,
+    playlist_autocomplete,
     play_track,
     music_loop
     )
@@ -257,7 +258,7 @@ async def play(interaction: discord.Interaction, query: str):
     track = results[0]
     queue = get_queue(interaction.guild_id)
     queue.add(track)
-    await interaction.followup.send(f'Playing: {track.title} - {track.artist}', ephemeral = True)
+    await interaction.followup.send(f'Added: {track.title} - {track.artist}', ephemeral = True)
 
     # Start music loop if not already running
     if not queue.is_playing:
@@ -265,7 +266,31 @@ async def play(interaction: discord.Interaction, query: str):
         await play_track(voice_client, queue.next(), interaction.guild_id)
         asyncio.create_task(music_loop(interaction.guild_id))
 
+# Add playlist to queue
+@bot.tree.command(name="playplaylist", description="Add a playlist to the queue", guilds=[guild_id1])
+@app_commands.autocomplete(query=playlist_autocomplete)
+async def playplaylist(interaction: discord.Interaction, query: str):
 
+    await interaction.response.defer()
+
+    voice_client = interaction.guild.voice_client
+    if not voice_client:
+        await interaction.followup.send("Bot is not in a voice channel! Use `/join` first.", ephemeral = True)
+        return
+
+    playlist_id, playlist_name, song_count = query.split("|")
+    tracks = await navidrome_client.getPlaylistSongs(playlist_id)
+    queue = get_queue(interaction.guild_id)
+    queue.addMultiple(tracks)
+
+    await interaction.followup.send(f'Added: {playlist_name} - {song_count} songs', ephemeral = True)
+    
+    # Start music loop if not already running
+    if not queue.is_playing:
+        queue.is_playing = True
+        await play_track(voice_client, queue.next(), interaction.guild_id)
+        asyncio.create_task(music_loop(interaction.guild_id))
+    
 
 # Stop playback and clear queue
 @bot.tree.command(name="stop", description="Stop playback", guilds=[guild_id1, guild_id2])

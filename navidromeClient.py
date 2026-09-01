@@ -1,7 +1,7 @@
 import secrets
 import hashlib
 import aiohttp
-from musicPlayerModels import Track
+from musicPlayerModels import Track, Playlist
 from typing import List, Optional, Dict
 
 
@@ -360,3 +360,88 @@ class NavidromeClient:
         except Exception as e:
             print(f"Error clearing playlist: {e}")
         return False
+
+
+    async def getPlaylistSongs(self, playlist_id: str) -> List[Playlist]:
+        salt = secrets.token_hex(3)
+        token = hashlib.md5((self.password + salt).encode()).hexdigest()
+
+        try:
+            params = {
+            'u': self.username,
+            't': token,
+            's': salt,
+            'c': 'Aqua',
+            'v': '1.16.1',
+            'f': 'json',
+            'id': playlist_id
+            }
+
+            timeout = aiohttp.ClientTimeout(total=10)
+            async with self.session.get(
+                f"{self.url}/rest/getPlaylist.view",
+                params=params,
+                timeout=timeout
+            ) as resp:
+                resp.raise_for_status()
+                data = await resp.json()
+
+                api_status = data.get('subsonic-response', {})
+                if api_status.get('status') != 'ok':
+                    error_code = api_status.get('error', {}).get('code')
+                    error_msg = api_status.get('error', {}).get('message', 'Unknown error')
+                    print(f"Subsonic Error {error_code}: {error_msg}")
+                    return False
+
+            songs = data.get('subsonic-response', {}).get('playlist', {}).get('entry', [])
+
+            if isinstance(songs, dict):
+                    songs = [songs]
+
+            return [Track(song, self.username, self.password, self.url) for song in songs]
+
+        except Exception as e:
+            print(f"Error getting songs from playlist with id: '{playlist_id}'\n {e}")
+            return False
+
+
+    async def getPlaylists(self) -> List[Playlist]:
+            salt = secrets.token_hex(3)
+            token = hashlib.md5((self.password + salt).encode()).hexdigest()
+    
+            try:
+                params = {
+                'u': self.username,
+                't': token,
+                's': salt,
+                'c': 'Aqua',
+                'v': '1.16.1',
+                'f': 'json',
+                }
+    
+                timeout = aiohttp.ClientTimeout(total=10)
+                async with self.session.get(
+                    f"{self.url}/rest/getPlaylists.view",
+                    params=params,
+                    timeout=timeout
+                ) as resp:
+                    resp.raise_for_status()
+                    data = await resp.json()
+    
+                    api_status = data.get('subsonic-response', {})
+                    if api_status.get('status') != 'ok':
+                        error_code = api_status.get('error', {}).get('code')
+                        error_msg = api_status.get('error', {}).get('message', 'Unknown error')
+                        print(f"Subsonic Error {error_code}: {error_msg}")
+                        return []
+    
+                playlists = data.get('subsonic-response', {}).get('playlists', {}).get('playlist', [])
+                if isinstance(playlists, dict):
+                    playlists = [playlists]
+
+                return [Playlist(playlist, self.username, self.password, self.url) for playlist in playlists]
+    
+            except Exception as e:
+                print(f"Error clearing playlist: {e}")
+                return[]
+        
