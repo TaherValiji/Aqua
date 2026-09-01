@@ -267,7 +267,7 @@ async def play(interaction: discord.Interaction, query: str):
         asyncio.create_task(music_loop(interaction.guild_id))
 
 # Add playlist to queue
-@bot.tree.command(name="playplaylist", description="Add a playlist to the queue", guilds=[guild_id1])
+@bot.tree.command(name="playplaylist", description="Add a playlist to the queue", guilds=[guild_id1, guild_id2])
 @app_commands.autocomplete(query=playlist_autocomplete)
 async def playplaylist(interaction: discord.Interaction, query: str):
 
@@ -412,7 +412,7 @@ async def get(interaction: discord.Interaction, url: str):
 
 
 # Download music using yt-dlp (YouTube-DL fork)
-@bot.tree.command(name="getplaylist", description="Get new playlist", guilds=[guild_id1])
+@bot.tree.command(name="getplaylist", description="Get new playlist", guilds=[guild_id1, guild_id2])
 async def getPlaylist(interaction: discord.Interaction, url: str):
 
     await interaction.response.defer(thinking=True)
